@@ -1,13 +1,15 @@
 #MODES: True Shuffle, Random cycle N times
 
 import logging
-import random
 import threading
+import asset_sorters
 from profiling import profile
+from roundware.rw.models import Tag
 from roundwared import gpsmixer
 from roundware.rw import models
 from roundwared import db
-from operator import itemgetter, attrgetter
+from operator import itemgetter
+from roundwared.asset_sorters import order_assets_randomly, order_assets_by_like, order_assets_by_weight
 
 
 class RecordingCollection:
@@ -34,6 +36,19 @@ class RecordingCollection:
         logging.debug("update_request")
         self.lock.acquire()
         self.all_recordings = db.get_recordings(request)
+
+        #filter recordings
+        if "tags" in request:
+            tag_ids = request["tags"]
+            if not hasattr(tag_ids, "__iter__"):
+                tag_ids = tag_ids.split(",")
+
+            tags = Tag.objects.filter(pk__in=tag_ids)
+            for tag in tags:
+                if tag.filter:
+                    logging.debug("Tag with filter found: %s: %s" % (tag, tag.filter))
+                    self.all_recordings = getattr(asset_sorters, tag.filter)(assets=self.all_recordings, request=request)
+
         self.far_recordings = self.all_recordings
         self.nearby_played_recordings = []
         self.nearby_unplayed_recordings = []
@@ -139,41 +154,43 @@ class RecordingCollection:
 
         logging.debug('Ordering is: ' + self.ordering)
         if self.ordering == 'random':
-            random.shuffle(new_nearby_unplayed_recordings)
+            new_nearby_unplayed_recordings = \
+                order_assets_randomly(new_nearby_unplayed_recordings)
         elif self.ordering == 'by_like':
             new_nearby_unplayed_recordings = \
-                self.order_assets_by_like(new_nearby_unplayed_recordings)
+                order_assets_by_like(new_nearby_unplayed_recordings)
         elif self.ordering == 'by_weight':
             new_nearby_unplayed_recordings = \
-                self.order_assets_by_weight(new_nearby_unplayed_recordings)
+                order_assets_by_weight(new_nearby_unplayed_recordings)
 
         self.far_recordings = new_far_recordings
         self.nearby_unplayed_recordings = new_nearby_unplayed_recordings
         self.nearby_played_recordings = new_nearby_played_recordings
 
-    def order_assets_by_like(self, assets):
-        unplayed = []
-        for asset in assets:
-            count = models.Asset.get_likes(asset)
-            unplayed.append((count, asset))
-        logging.info('Unordered: ' +
-                     str([(u[0], u[1].filename) for u in unplayed]))
-        unplayed = sorted(unplayed, key=itemgetter(0), reverse=True)
-        logging.info('Ordered by like: ' +
-                     str([(u[0], u[1].filename) for u in unplayed]))
-        return [x[1] for x in unplayed]
-
-    def order_assets_by_weight(self, assets):
-        unplayed = []
-        for asset in assets:
-            weight = asset.weight
-            unplayed.append((weight, asset))
-        logging.debug('Unordered: ' +
-                      str([(u[0], u[1].filename) for u in unplayed]))
-        unplayed = sorted(unplayed, key=itemgetter(0), reverse=True)
-        logging.debug('Ordered by weighting: ' +
-                      str([(u[0], u[1].filename) for u in unplayed]))
-        return [x[1] for x in unplayed]
+    # JSS: Moved to roundwared/asset_sorters
+    # def order_assets_by_like(self, assets):
+    #     unplayed = []
+    #     for asset in assets:
+    #         count = models.Asset.get_likes(asset)
+    #         unplayed.append((count, asset))
+    #     logging.info('Unordered: ' +
+    #                  str([(u[0], u[1].filename) for u in unplayed]))
+    #     unplayed = sorted(unplayed, key=itemgetter(0), reverse=True)
+    #     logging.info('Ordered by like: ' +
+    #                  str([(u[0], u[1].filename) for u in unplayed]))
+    #     return [x[1] for x in unplayed]
+    #
+    # def order_assets_by_weight(self, assets):
+    #     unplayed = []
+    #     for asset in assets:
+    #         weight = asset.weight
+    #         unplayed.append((weight, asset))
+    #     logging.debug('Unordered: ' +
+    #                   str([(u[0], u[1].filename) for u in unplayed]))
+    #     unplayed = sorted(unplayed, key=itemgetter(0), reverse=True)
+    #     logging.debug('Ordered by weighting: ' +
+    #                   str([(u[0], u[1].filename) for u in unplayed]))
+    #     return [x[1] for x in unplayed]
 
     #True if the listener and recording are close enough to be heard.
     def is_nearby(self, listener, recording):

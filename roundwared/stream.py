@@ -98,7 +98,7 @@ class RoundStream:
         self.request = request
         self.listener = request
         self.refresh_recordings()
-        logging.info("Going to play: " \
+        logging.info("Stream modification: Going to play: " \
             + ",".join(self.recordingCollection.get_filenames()) \
             + " Total of " \
             + str(len(self.recordingCollection.get_filenames()))

@@ -26,7 +26,7 @@ AUDIO_FILE_DIR = MEDIA_BASE_DIR #+ "audio"
 VIDEO_FILE_DIR = MEDIA_BASE_DIR #+ "video"
 IMAGE_FILE_DIR = MEDIA_BASE_DIR #+ "img"
 
-ALLOWED_AUDIO_MIME_TYPES = ['audio/x-wav', 'audio/mpeg', 'audio/mp4a-latm', 'audio/x-caf',  'audio/mp3',  ]
+ALLOWED_AUDIO_MIME_TYPES = ['audio/x-wav', 'audio/mpeg', 'audio/mp4a-latm', 'audio/x-caf',  'audio/mp3', 'audio/wav' ]
 ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/gif', 'image/png', 'image/pjpeg', ]
 ALLOWED_TEXT_MIME_TYPES = ['text/plain', 'text/html', 'application/xml', ]
 ALLOWED_MIME_TYPES = ALLOWED_AUDIO_MIME_TYPES + ALLOWED_IMAGE_MIME_TYPES + ALLOWED_TEXT_MIME_TYPES
@@ -228,11 +228,11 @@ if DEBUG:
             'formatter': 'verbose'
         },
         'profile_logfile': {
-            'filename': '/var/log/rwprofiling',
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'formatter': 'verbose'
-        },        
+           'filename': '/var/log/rwprofiling',
+           'level': 'DEBUG',
+           'class': 'logging.FileHandler',
+           'formatter': 'verbose'
+        },
     })
 
     LOGGING['loggers'].update({
@@ -240,8 +240,8 @@ if DEBUG:
             'level': 'DEBUG',
             'handlers': ['console','profile_logfile'],
             'propagate': False,
-         },   
-    })       
+         },
+    })
 
 CACHES = {
     'default': {
@@ -259,4 +259,10 @@ CACHES = {
 try:
     from local_settings import *
 except ImportError:
+    pass
+
+try:
+    if LOCAL_INSTALLED_APPS:
+        INSTALLED_APPS += LOCAL_INSTALLED_APPS
+except NameError:
     pass

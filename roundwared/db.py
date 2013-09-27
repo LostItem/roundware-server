@@ -92,37 +92,39 @@ def get_recordings(request):
     recs = []
     p = None
     s = None
-    if request.has_key("project_id") and hasattr(request["project_id"], "__iter__") and len(request["project_id"]) > 0:
-        logging.debug("get_recordings: got project_id: " + str(request["project_id"][0]))
-        p = Project.objects.get(id=request["project_id"][0])
-    elif request.has_key("project_id") and not hasattr(request["project_id"], "__iter__"):
-        logging.debug("get_recordings: got project_id: " + str(request["project_id"]))
-        p = Project.objects.get(id=request["project_id"])
+    if "project_id" in request:
+        if hasattr(request["project_id"], "__iter__") and len(request["project_id"]) > 0:
+            logging.debug("get_recordings: got project_id: " + str(request["project_id"][0]))
+            p = Project.objects.get(id=request["project_id"][0])
+        elif not hasattr(request["project_id"], "__iter__"):
+            logging.debug("get_recordings: got project_id: " + str(request["project_id"]))
+            p = Project.objects.get(id=request["project_id"])
 
-    if request.has_key("session_id") and hasattr(request["session_id"], "__iter__") and len(request["session_id"]) > 0:
-        logging.debug("get_recordings: got session_id: " + str(request["session_id"][0]))
-        s = Session.objects.select_related('project', 'language').get(id=request["session_id"][0])
-        p = s.project
-    elif request.has_key("session_id") and not hasattr(request["session_id"], "__iter__"):
-        logging.debug("get_recordings: got session_id: " + str(request["session_id"]))
-        s = Session.objects.select_related('project', 'language').get(id=request["session_id"])
-        p = s.project
+    if "session_id" in request:
+        if hasattr(request["session_id"], "__iter__") and len(request["session_id"]) > 0:
+            logging.debug("get_recordings: got session_id: " + str(request["session_id"][0]))
+            s = Session.objects.select_related('project', 'language').get(id=request["session_id"][0])
+        elif not hasattr(request["session_id"], "__iter__"):
+            logging.debug("get_recordings: got session_id: " + str(request["session_id"]))
+            s = Session.objects.select_related('project', 'language').get(id=request["session_id"])
+        if s:
+            p = s.project
 
     # this first check checks whether tags is a list of numbers.
-    if request.has_key("tags") and hasattr(request["tags"], "__iter__") and len(request["tags"]) > 0:
-        logging.debug("get_recordings: got " + str(len(request["tags"])) + "tags.")
-        #recs = Asset.objects.filter(project=p, submitted=True, tags__in=request["tags"])
-        recs = filter_recs_for_tags(p, request["tags"], s.language)
-    # this second check checks whether tags is a string representation of a list of numbers.
-    elif request.has_key("tags") and not hasattr(request["tags"], "__iter__"):
-        logging.debug("get_recordings: tags supplied: " + request["tags"])
-        #recs = Asset.objects.filter(project=p,submitted=True, tags__in=request["tags"].split(","))
-        recs = filter_recs_for_tags(p, request["tags"].split(","), s.language)
-    else:
-        logging.debug("get_recordings: no tags supplied")
-        if s != None:
-            recs = Asset.objects.filter(project=p, submitted=True, audiolength__gt=1000, language=s.language).distinct()
-            recs = filter_recs_for_tags(p, get_default_tags_for_project(p, s), s.language)
+    if s:
+        tags = get_default_tags_for_project(p, s)
+        if "tags" in request:
+            tags = request["tags"]
+            if hasattr(tags, "__iter__") and len(tags) > 0:
+                logging.debug("get_recordings: got %s tags: [ %s ]" % (str(len(tags)), tags))
+        # this second check checks whether tags is a string representation of a list of numbers.
+            elif not hasattr(tags, "__iter__"):
+                logging.debug("get_recordings: tags supplied: [ %s ]" % (tags,))
+                tags = tags.split(",")
+        else:
+            logging.debug("get_recordings: no tags supplied")
+
+        recs = filter_recs_for_tags(p, tags, s.language)
 
     logging.debug("db: get_recordings: got " + str(len(recs)) + " recordings from db for project " + str(p.id))
     return recs
@@ -169,8 +171,8 @@ def filter_recs_for_tags(p, tagids_from_request, l):
     for cat in project_cats:
         tag_ids_per_cat_dict[cat.id] = [tag.id for tag in Tag.objects.filter(tag_category=cat)]
 
+    project_recs = list(Asset.objects.filter(project=p, submitted=True, audiolength__gt=1000, language=l).distinct())
 
-    project_recs = Asset.objects.filter(project=p, submitted=True, audiolength__gt=1000, language=l).distinct()
     for rec in project_recs:
         remove = False
         rec_tag_ids = [tag.id for tag in rec.tags.all()]
