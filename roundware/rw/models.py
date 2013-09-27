@@ -136,7 +136,7 @@ class Tag(models.Model):
     FILTERS = (
         ("--", "No filter"),
         ("_within_10km", "Assets within 10km."),
-        ("_10_most_recent_days", "Assets created within 10 days."),
+        ("_ten_most_recent_days", "Assets created within 10 days."),
     )
 
     tag_category = models.ForeignKey(TagCategory)
