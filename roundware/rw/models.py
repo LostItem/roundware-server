@@ -9,6 +9,7 @@ from roundware.rw import fields
 from django.conf import settings
 from datetime import datetime, date, timedelta
 from cache_utils.decorators import cached
+from roundwared.gpsmixer import distance_in_meters
 
 try:
     import simplejson as json
@@ -447,6 +448,10 @@ class Asset(models.Model):
 
     get_votes.short_description = "Votes"
     get_votes.name = "Votes"
+
+    def distance(self, listener):
+        return distance_in_meters(self.latitude, self.longitude,
+                                  listener['latitude'], listener['longitude'])
 
     @transaction.commit_on_success
     def save(self, force_insert=False, force_update=False, using=None, *args, **kwargs):
