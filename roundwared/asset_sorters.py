@@ -2,7 +2,7 @@ import logging
 from operator import itemgetter
 import random
 from roundware.rw import models
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 
 def order_assets_by_like(assets):
@@ -55,6 +55,6 @@ def _ten_most_recent_days(*args, **kwargs):
     else:
         raise TypeError("Function requires assets=[]")
 
-    returning_assets = ([asset for asset in assets if asset.created >= (date.today() - timedelta(10))])
+    returning_assets = ([asset for asset in assets if datetime(asset.created.year, asset.created.month, asset.created.day) >= (date.today() - timedelta(10))])
     logging.debug("returning filtered assets: %s" % (returning_assets,))
     return returning_assets
