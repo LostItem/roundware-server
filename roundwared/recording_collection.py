@@ -36,19 +36,6 @@ class RecordingCollection:
         logging.debug("update_request")
         self.lock.acquire()
         self.all_recordings = db.get_recordings(request)
-
-        #filter recordings
-        if "tags" in request:
-            tag_ids = request["tags"]
-            if not hasattr(tag_ids, "__iter__"):
-                tag_ids = tag_ids.split(",")
-
-            tags = Tag.objects.filter(pk__in=tag_ids)
-            for tag in tags:
-                if tag.filter:
-                    logging.debug("Tag with filter found: %s: %s" % (tag, tag.filter))
-                    self.all_recordings = getattr(asset_sorters, tag.filter)(assets=self.all_recordings, request=request)
-
         self.far_recordings = self.all_recordings
         self.nearby_played_recordings = []
         self.nearby_unplayed_recordings = []
