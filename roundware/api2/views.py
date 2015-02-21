@@ -103,7 +103,6 @@ class StreamViewSet(viewsets.ViewSet):
 
         # TODO: Return data about the stream, only if it exists.
 
-
         return Response(serializer.data)
 
 
