@@ -98,8 +98,9 @@ mkdir -p $STATIC_PATH
 cp $SOURCE_PATH/files/rw_test_audio1.wav $MEDIA_PATH
 
 # Copy default production settings file
-mkdir -p $WWW_PATH/settings
+mkdir $WWW_PATH/settings
 cp $SOURCE_PATH/files/var-www-roundware-settings.py $WWW_PATH/settings/roundware_production.py
+chown $USERNAME:$USERNAME -R $WWW_PATH/settings
 
 # Setup roundware log and logrotate
 touch /var/log/roundware
