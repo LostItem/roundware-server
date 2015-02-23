@@ -41,6 +41,12 @@ def patch(file, patch):
     run('patch -N {file} < {patch} || true'.format(file=file, patch=patch))
 
 @task
+def localhost():
+    """set environment variables for localhost"""
+    env.hosts = ['localhost']
+    env.user = 'vagrant' if fabtools.files.exists('/vagrant') else 'roundware'
+
+@task
 def install_roundware():
     """
     installs roundware on the server
@@ -215,11 +221,6 @@ def deploy():
     deploys the code to the instance
     :return:
     """
-    vagrant = fabtools.files.exists('/vagrant')
-
-    username = 'vagrant' if vagrant else 'roundware'
-
-    env.user = username
 
     if not fabtools.files.is_dir(CODE_PATH):
         fabtools.files.symlink(CODE_PATH, CODE_PATH)

@@ -56,28 +56,13 @@ if [ ! "$FOUND_VAGRANT" = true ]; then
   fi
 fi
 
-# Replace the user's .profile
-cp $SOURCE_PATH/files/home-user-profile /home/$USERNAME/.profile
-
-# Create a symbolic link to the main roundware directory
-ln -sfn $WWW_PATH /home/$USERNAME/www
-
-apt-get update
-
-# Set MySQL root password
-echo "mysql-server mysql-server/root_password password $MYSQL_ROOT" | debconf-set-selections
-echo "mysql-server mysql-server/root_password_again password $MYSQL_ROOT" | debconf-set-selections
-
 # Install required packages non-interactive
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-apache2 libapache2-mod-wsgi mysql-server libav-tools mediainfo pacpl icecast2 \
-python-dev python-pip python-mysqldb python-dbus python-gst0.10 \
-gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
-gstreamer0.10-plugins-ugly gstreamer0.10-tools
+DEBIAN_FRONTEND=noninteractive apt-get install -y python-dev python-pip
 
 # Install/upgrade virtualenv
-pip install -U virtualenv
+pip install -U virtualenv fabric
 
+$CODE_PATH/fab localhost install
 # Create the virtual environment
 virtualenv --system-site-packages $VENV_PATH
 
