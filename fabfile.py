@@ -11,6 +11,8 @@ __author__ = 'Evan'
 A set of methods for managing and deploying RoundWare server instances
 """
 
+PASSWORD = "ChangeMe!_tmp"
+
 # Set paths/directories
 WWW_PATH = "/var/www/roundware"
 CODE_PATH = os.path.join(WWW_PATH, "source")
@@ -27,24 +29,35 @@ POSTGIS_PACKAGES = [
     ]
 
 
-def virtualenv(cmd):
-    with run("source " + os.path.join(VENV_PATH, 'bin', 'activate')):
-        run(cmd)
+def virtualenv(command):
+    activate = os.path.join(VENV_PATH, 'bin', 'activate')
+    virtualenv_command = ' '.join(['source', activate, '&&', command])
+    run(virtualenv_command)
 
 
 def manage_py(cmd):
     with cd(os.path.join(CODE_PATH, 'roundware')):
-        virtualenv(cmd)
+        virtualenv("./manage.py " + cmd)
 
 
 def patch(file, patch):
     run('patch -N {file} < {patch} || true'.format(file=file, patch=patch))
 
+
 @task
-def localhost():
+def localhost(user='roundware'):
     """set environment variables for localhost"""
+
     env.hosts = ['localhost']
-    env.user = 'vagrant' if fabtools.files.exists('/vagrant') else 'roundware'
+    env.host_string = 'localhost'
+
+    env.user = user
+    password = 'vagrant' if user == 'vagrant' else PASSWORD
+
+    env.loginpassword = password
+    env.password = password
+
+
 
 @task
 def install_roundware():
@@ -226,7 +239,7 @@ def deploy():
         fabtools.files.symlink(CODE_PATH, CODE_PATH)
 
     # Install upgrade pip
-    virtualenv('pip install -u pip')
+    virtualenv('pip install -U pip')
 
     # Install and upgrade RoundWare requirements
     virtualenv('pip install -r {requirements} --upgrade'.format(requirements=CODE_PATH + '/requirements.txt'))
@@ -242,7 +255,7 @@ def deploy():
     sudo('export PYTHONPATH=$PYTHONPATH:$CODE_PATH')
 
     # Set $USERNAME to own all files
-    sudo('chown {user}:{group} -R {path}'.format(user=username, group=username, path=WWW_PATH))
+    sudo('chown {user}:{group} -R {path}'.format(user=env.user, group=env.user, path=WWW_PATH))
 
     manage_py("migrate --noinput")
     manage_py("collectstatic --noinput")
