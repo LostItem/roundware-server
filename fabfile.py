@@ -1,6 +1,8 @@
 import os
+from fabric.contrib.files import sed, append
 import fabtools
 from fabric.api import *
+from fabtools.files import copy
 from fabtools.vagrant import vagrant
 from fabtools import require
 import cuisine
@@ -17,6 +19,43 @@ PASSWORD = "ChangeMe!_tmp"
 WWW_PATH = "/var/www/roundware"
 CODE_PATH = os.path.join(WWW_PATH, "source")
 VENV_PATH = WWW_PATH
+THIS_DIR = os.path.dirname(__file__)
+
+REQUIRED_PACKAGES = [
+    "apache2",
+    "libapache2-mod-wsgi",
+    "mysql-server",
+    "libav-tools",
+    "mediainfo",
+    "pacpl",
+    "icecast2"
+
+    #system
+    'build-essential',
+    'git',
+
+    # python
+    'python-pip',
+    'python-virtualenv',
+    'python-dev',
+    'virtualenvwrapper',
+    "python-dbus",
+    "python-gst0.10"
+
+    "gstreamer0.10-plugins-good",
+    "gstreamer0.10-plugins-bad",
+    "gstreamer0.10-plugins-ugly",
+    "gstreamer0.10-tools"
+]
+
+# DEV_CODE_PATH="$HOME_PATH/roundware-server"
+#
+# WWW_PATH="/var/www/roundware"
+# CODE_PATH="$WWW_PATH/source"
+STATIC_PATH = "$WWW_PATH/static"
+MEDIA_PATH = "$WWW_PATH/rwmedia"
+# VENV_PATH="$WWW_PATH"
+# SITE_PACKAGES_PATH="$VENV_PATH/lib/python2.7/site-packages"
 
 POSTGIS_PACKAGES = [
     'postgresql-contrib-9.3',
@@ -44,10 +83,43 @@ def patch(file, patch):
     run('patch -N {file} < {patch} || true'.format(file=file, patch=patch))
 
 
+def setup_webserver():
+    """
+    configures apache to serve RW
+    :return:
+    """
+    # TODO why not use nginx?
+    # # Setup Apache Server
+
+    run("a2enmod rewrite")
+    run("a2enmod wsgi")
+    run("a2enmod headers")
+    run("a2dissite 000-default")
+
+    # configure Apache to serve RW directory
+
+    # Setup roundware in Apache
+    config_template = open(THIS_DIR + "/files/rw_apache.conf").readall()
+
+    format_config_file(config_template, "/etc/apache2/sites-available/roundware.conf", {'user': env.user})
+
+    run("a2ensite roundware")
+
+@task
+def setup_logrotate():
+    """
+    sets up logrotate
+    """
+    # make sure logfile is present and owned by user
+    cuisine.file_ensure('/var/log/roundware', owner=env.user, group=env.user)
+    logrotate_template = CODE_PATH + "/files/roundware_logrotate_template"
+    format_config_file(logrotate_template, '/etc/logrotate.d/roundware', {'user': env.user})
+
 @task
 def localhost(user='roundware'):
-    """set environment variables for localhost"""
-
+    """
+    set environment variables for localhost
+    """
     env.hosts = ['localhost']
     env.host_string = 'localhost'
 
@@ -58,6 +130,18 @@ def localhost(user='roundware'):
     env.password = password
 
 
+def format_config_file(template, destination, format_dict):
+    template_content = open(template).readall()
+
+    rendered_template_content = template_content.format(**format_dict)
+    template_content.close()
+
+    rendered_template_path = template.replace("_template", "")
+    run("rm -f {0}".format(rendered_template_path))
+    cuisine.file_ensure(rendered_template_path)
+    cuisine.file_append(rendered_template_path, rendered_template_content)
+    cuisine.file_link(rendered_template_path, destination)
+
 
 @task
 def install_roundware():
@@ -65,151 +149,82 @@ def install_roundware():
     installs roundware on the server
     :return:
     """
-    #!/bin/bash
-    # # Installer for Roundware Server (http://www.roundware.org/)
-    # # Tested with Ubuntu 14.04 LTS 64 bit
-    #
-    # # Enable exit on error
-    # set -e
-    # set -v
-    #
-    # # Default MySQL root user password (Change this on a production system!)
-    # MYSQL_ROOT="password"
-    #
-    # # Store the script start path
-    # SOURCE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    #
-    # # Check if we are installing via vagrant (assuming standard Vagrant /vagrant share)
-    # if [ -d "/vagrant" ]; then
-    #   echo "Found Vagrant."
-    #   FOUND_VAGRANT=true
-    # fi
-    #
-    # # Default user name.
-    # USERNAME="roundware"
-    #
-    # # Use vagrant username/directories used when available.
-    # if [ "$FOUND_VAGRANT" = true ]; then
-    #   # Change the user to the vagrant default.
-    #   USERNAME="vagrant"
-    #
-    #   # Create a symbolic link in the user's directory to the code
-    #   ln -sfn /vagrant /home/$USERNAME/roundware-server
-    # fi
-    #
-    # # Set paths/directories
-    # HOME_PATH="/home/$USERNAME"
-    # DEV_CODE_PATH="$HOME_PATH/roundware-server"
-    #
-    # WWW_PATH="/var/www/roundware"
-    # CODE_PATH="$WWW_PATH/source"
-    # STATIC_PATH="$WWW_PATH/static"
-    # MEDIA_PATH="$WWW_PATH/rwmedia"
-    # VENV_PATH="$WWW_PATH"
-    # SITE_PACKAGES_PATH="$VENV_PATH/lib/python2.7/site-packages"
-    #
-    # # If not vagrant, create user and copy files.
+
+    if env.user == 'vagrant':
+        dev_code_path = "/vagrant"
+    else:
+        dev_code_path = "/var/www/roundware/source"
+
+    cuisine.file_link(CODE_PATH, dev_code_path)
+
     # if [ ! "$FOUND_VAGRANT" = true ]; then
     #
     #   # If user home doesn't exist, create the user.
     #   if [ ! -d "/home/$USERNAME" ]; then
     #     useradd $USERNAME -s /bin/bash -m -d $HOME_PATH
     #   fi
-    #
-    #   # If source and dev code paths are different, create a symbolic link to code.
-    #   if [ $SOURCE_PATH != $DEV_CODE_PATH ]; then
-    #     rm -rf $DEV_CODE_PATH
-    #     ln -sfn $CODE_PATH $DEV_CODE_PATH
-    #   fi
-    # fi
-    #
-    # # Replace the user's .profile
-    # cp $SOURCE_PATH/files/home-user-profile /home/$USERNAME/.profile
-    #
-    # # Create a symbolic link to the main roundware directory
-    # ln -sfn $WWW_PATH /home/$USERNAME/www
-    #
-    # apt-get update
-    #
-    # # Set MySQL root password
-    # echo "mysql-server mysql-server/root_password password $MYSQL_ROOT" | debconf-set-selections
-    # echo "mysql-server mysql-server/root_password_again password $MYSQL_ROOT" | debconf-set-selections
-    #
-    # # Install required packages non-interactive
-    # DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    # apache2 libapache2-mod-wsgi mysql-server libav-tools mediainfo pacpl icecast2 \
-    # python-dev python-pip python-mysqldb python-dbus python-gst0.10 \
-    # gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
-    # gstreamer0.10-plugins-ugly gstreamer0.10-tools
-    #
-    # # Install/upgrade virtualenv
-    # pip install -U virtualenv
-    #
-    # # Create the virtual environment
-    # virtualenv --system-site-packages $VENV_PATH
-    #
-    # # Activate the environment
-    # source $VENV_PATH/bin/activate
-    # # Set python path to use production code
-    # export PYTHONPATH=$CODE_PATH
-    #
-    # # Setup MySQL database
-    # echo "create database IF NOT EXISTS roundware;" | mysql -uroot -p$MYSQL_ROOT
-    # echo "grant all privileges on roundware.* to 'round'@'localhost' identified by 'round';" | mysql -uroot -p$MYSQL_ROOT
-    #
-    # # File/directory configurations
-    # mkdir -p $MEDIA_PATH
-    # mkdir -p $STATIC_PATH
-    #
-    # # copy test audio file to media storage
-    # cp $SOURCE_PATH/files/rw_test_audio1.wav $MEDIA_PATH
-    #
-    # # Copy default production settings file
-    # mkdir $WWW_PATH/settings
-    # cp $SOURCE_PATH/files/var-www-roundware-settings.py $WWW_PATH/settings/roundware_production.py
-    # chown $USERNAME:$USERNAME -R $WWW_PATH/settings
-    #
-    # # Setup roundware log and logrotate
-    # touch /var/log/roundware
-    # chown $USERNAME:$USERNAME /var/log/roundware
-    #
-    # # Run the production upgrade/deployment script
-    # $SOURCE_PATH/deploy.sh
-    #
-    # # Setup Apache Server
-    # a2enmod rewrite
-    # a2enmod wsgi
-    # a2enmod headers
-    # a2dissite 000-default
-    # # Setup roundware in Apache
-    # rm -f /etc/apache2/sites-available/roundware.conf
-    # sed s/USERNAME/$USERNAME/g $CODE_PATH/files/etc-apache2-sites-available-roundware > /etc/apache2/sites-available/roundware.conf
-    # a2ensite roundware
-    #
-    # # Setup logrotate
-    # sed s/USERNAME/$USERNAME/g $CODE_PATH/files/etc-logrotate-d-roundware > /etc/logrotate.d/roundware
-    #
-    # # Install correct shout2send gstreamer plugin
-    # mv /usr/lib/x86_64-linux-gnu/gstreamer-0.10/libgstshout2.so /usr/lib/x86_64-linux-gnu/gstreamer-0.10/libgstshout2.so.old
-    # cp $CODE_PATH/files/64-bit/libgstshout2.so /usr/lib/x86_64-linux-gnu/gstreamer-0.10/libgstshout2.so
-    #
-    # # Set $USERNAME to own all files
-    # chown $USERNAME:$USERNAME -R $HOME_PATH
-    #
-    # # Setup the default admin account
-    # su - $USERNAME -c "$CODE_PATH/roundware/manage.py loaddata default_auth.json"
-    #
-    # # Setup the sample project
-    # su - $USERNAME -c "$CODE_PATH/roundware/manage.py loaddata sample_project.json"
-    #
-    # service apache2 restart
-    #
-    # # Setup icecast
-    # cp $CODE_PATH/files/etc-default-icecast2 /etc/default/icecast2
-    # cp $CODE_PATH/files/etc-icecast2-icecast.xml /etc/icecast2/icecast.xml
-    # service icecast2 restart
-    #
-    # echo "Install Complete"
+
+    # Replace the user's .profile
+    cuisine.file_link(os.path.join(dev_code_path, "files/home-user-profile"), "~/.profile")
+    cuisine.file_link(WWW_PATH, "/home/{user}/www")
+
+    # update and upgrade default system packages
+    cuisine.package_update()
+    cuisine.package_upgrade()
+
+    # install system packages
+    cuisine.package_ensure(" ".join(REQUIRED_PACKAGES))
+
+    cuisine.python_package_ensure('virtualenv')
+    cuisine.python_package_upgrade('pip')
+
+    run('virtualenv --system-site-packages {path}'.format(VENV_PATH))
+
+    # install postgis and create database
+    setup_postgis()
+
+    cuisine.dir_ensure(MEDIA_PATH, recursive=True, owner=env.user)
+    cuisine.dir_ensure(STATIC_PATH, recursive=True, owner=env.user)
+
+    cuisine.file_link(CODE_PATH + "/files/var-www-roundware-settings.py", WWW_PATH + "/settings/roundware_production.py")
+
+    # Run the production upgrade/deployment script
+    deploy()
+
+    setup_webserver()
+
+    install_gstreamer_plugin()
+
+    # copy test audio file to media storage
+    cuisine.file_link(CODE_PATH + "/files/rw_test_audio1.wav", MEDIA_PATH)
+
+    # env.user should own all files at home
+    cuisine.dir_attribs("~", owner=env.user, group=env.user)
+
+    manage_py("loaddata default_auth.json")
+    manage_py("loaddata sample_project.json")
+
+    setup_icecast()
+    run("service apache2 restart")
+    run("service icecast2 restart")
+
+    print "Install Complete"
+
+@task
+def install_gstreamer_plugin():
+    plugin = "/usr/lib/x86_64-linux-gnu/gstreamer-0.10/libgstshout2.so"
+    cuisine.file_backup(plugin, suffix=".old")
+    cuisine.file_link(CODE_PATH + "/files/64-bit/libgstshout2.so", plugin)
+
+@task
+def setup_icecast():
+    """
+    sets up icecast2
+    :return:
+    """
+    cuisine.file_link(CODE_PATH + "files/etc-default-icecast2", '/etc/default/icecast2')
+    cuisine.file_link(CODE_PATH + "etc-icecast2-icecast.xml", '/etc/icecast2/icecast.xml')
+    run("service icecast2 restart")
 
 
 @task
@@ -227,6 +242,7 @@ def setup_postgis():
     fabtools.require.postgres.database("roundware", env.user)
     fabtools.postgres._run_as_pg("psql -U postgres roundware -c 'create extension if not exists postgis;'")
     fabtools.postgres._run_as_pg("psql -U postgres roundware -c 'grant all on database roundware to {user};'".format(user=env.user))
+
 
 @task
 def deploy():
