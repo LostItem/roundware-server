@@ -86,11 +86,11 @@ DATABASES = {
     'default': {
         # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or
         # 'oracle'.
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
 
         # Or path to database file if using sqlite3.
         'NAME': 'roundware',
-        'USER': 'round',
+        'USER': 'roundware',
         'PASSWORD': 'round',
         'HOST': '',
         'PORT': '',

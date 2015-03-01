@@ -1,0 +1,14 @@
+---
+# tasks file for icecast
+
+- name: make sure icecast is installed
+  apt: pkg=icecast2 state=installed
+  tags: icecast
+
+- name: make sure icecast.xml configuration is up to date
+  copy: src=icecast.xml dest=/etc/icecast2/icecast.xml
+  tags: icecast
+
+- name: make sure icecast service file is up to date
+  copy: src=etc-default-icecast2 dest=/etc/default/icecast2
+  tags: icecast

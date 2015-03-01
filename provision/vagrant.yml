@@ -1,0 +1,67 @@
+- name: Install PostgreSQL and PostGIS
+  hosts: all
+  remote_user: vagrant
+  sudo: yes
+  vars:
+
+    postgresql_ext_install_contrib: yes
+    postgresql_ext_install_dev_headers: yes
+    postgresql_ext_install_postgis: yes
+
+    postgresql_databases:
+      - name: roundware
+        gis: yes
+
+    postgresql_users:
+      - name: round
+        pass: round
+        encrypted: no
+
+    postgresql_user_priviledges:
+      - name: round
+        db: roundware
+        priv: 'ALL'
+
+    nginx_configs:
+      proxy:
+        - proxy_set_header X-Real-IP  $remote_addr
+        - proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+      upstream:
+        - upstream roundware_gunicorn { server unix:///var/www/run/call_center_nginx.sock fail_timeout=0; }
+
+    nginx_sites:
+       default:
+         - listen 80
+         - server_name _
+         - root "/usr/share/nginx/html"
+         - location /static/ {
+             alias /var/www/roundware/static;
+             autoindex off;
+           }
+         - location /rwmedia/ {
+             alias /var/www/roundware/rwmedia;
+             autoindex off;
+           }
+         - location / {
+              proxy_pass http://roundware_gunicorn;
+           }
+
+#    monit_prodection: yes
+
+#     roundware-server:
+#         - listen 80
+#         - server_name roundware-server
+#         - location /static { alias /var/www/roundware/static }
+#         - location /rwmedia { alias /var/www/roundware/rwmedia }
+#         - rewrite ^/roundware/api/v1/(.+)$ /api/1/rest/$1
+#         - rewrite ^/roundware/?(.+) /api/1$1
+#     rw-django:
+#         - listen 8080
+#         - server_name localhost
+
+  roles:
+    - ANXS.postgresql
+    - jdauphant.nginx
+    - icecast
+
+

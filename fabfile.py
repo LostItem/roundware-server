@@ -28,7 +28,7 @@ REQUIRED_PACKAGES = [
     "libav-tools",
     "mediainfo",
     "pacpl",
-    "icecast2"
+    "icecast2",
 
     #system
     'build-essential',
@@ -40,7 +40,7 @@ REQUIRED_PACKAGES = [
     'python-dev',
     'virtualenvwrapper',
     "python-dbus",
-    "python-gst0.10"
+    "python-gst0.10",
 
     "gstreamer0.10-plugins-good",
     "gstreamer0.10-plugins-bad",
@@ -52,8 +52,9 @@ REQUIRED_PACKAGES = [
 #
 # WWW_PATH="/var/www/roundware"
 # CODE_PATH="$WWW_PATH/source"
-STATIC_PATH = "$WWW_PATH/static"
-MEDIA_PATH = "$WWW_PATH/rwmedia"
+STATIC_PATH = os.path.join(WWW_PATH, "static")
+MEDIA_PATH = os.path.join(WWW_PATH, "rwmedia")
+
 # VENV_PATH="$WWW_PATH"
 # SITE_PACKAGES_PATH="$VENV_PATH/lib/python2.7/site-packages"
 
@@ -155,8 +156,6 @@ def install_roundware():
     else:
         dev_code_path = "/var/www/roundware/source"
 
-    cuisine.file_link(CODE_PATH, dev_code_path)
-
     # if [ ! "$FOUND_VAGRANT" = true ]; then
     #
     #   # If user home doesn't exist, create the user.
@@ -164,9 +163,9 @@ def install_roundware():
     #     useradd $USERNAME -s /bin/bash -m -d $HOME_PATH
     #   fi
 
-    # Replace the user's .profile
-    cuisine.file_link(os.path.join(dev_code_path, "files/home-user-profile"), "~/.profile")
-    cuisine.file_link(WWW_PATH, "/home/{user}/www")
+    fabtools.require.directory(WWW_PATH, use_sudo=True, owner=env.user, group=env.user)
+
+    cuisine.file_link(WWW_PATH, "/home/{user}/www".format(user=env.user))
 
     # update and upgrade default system packages
     cuisine.package_update()
@@ -175,13 +174,15 @@ def install_roundware():
     # install system packages
     cuisine.package_ensure(" ".join(REQUIRED_PACKAGES))
 
-    cuisine.python_package_ensure('virtualenv')
-    cuisine.python_package_upgrade('pip')
+    # make sure pip is most recent version
+    sudo("pip install -U pip")
 
-    run('virtualenv --system-site-packages {path}'.format(VENV_PATH))
+    cuisine.python_package_ensure('virtualenv')
+    sudo('virtualenv --system-site-packages {path}'.format(path=VENV_PATH))
 
     # install postgis and create database
     setup_postgis()
+
 
     cuisine.dir_ensure(MEDIA_PATH, recursive=True, owner=env.user)
     cuisine.dir_ensure(STATIC_PATH, recursive=True, owner=env.user)
@@ -207,6 +208,10 @@ def install_roundware():
     setup_icecast()
     run("service apache2 restart")
     run("service icecast2 restart")
+
+    # Replace the user's .profile
+    run("rm -f ~/.profile")
+    cuisine.file_link(os.path.join(dev_code_path, "files/home-user-profile"), "~/.profile")
 
     print "Install Complete"
 
@@ -237,8 +242,8 @@ def setup_postgis():
 
     cuisine.package_update()
     cuisine.package_upgrade()
-    cuisine.package_ensure(POSTGIS_PACKAGES)
-    fabtools.require.postgres.user(env.user, env.password)
+    cuisine.package_ensure(" ".join(POSTGIS_PACKAGES))
+    fabtools.require.postgres.user(env.user, "round")
     fabtools.require.postgres.database("roundware", env.user)
     fabtools.postgres._run_as_pg("psql -U postgres roundware -c 'create extension if not exists postgis;'")
     fabtools.postgres._run_as_pg("psql -U postgres roundware -c 'grant all on database roundware to {user};'".format(user=env.user))
@@ -252,7 +257,7 @@ def deploy():
     """
 
     if not fabtools.files.is_dir(CODE_PATH):
-        fabtools.files.symlink(CODE_PATH, CODE_PATH)
+        fabtools.files.symlink(CODE_PATH, _PATH)
 
     # Install upgrade pip
     virtualenv('pip install -U pip')
