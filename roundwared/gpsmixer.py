@@ -37,7 +37,7 @@ class GPSMixer (gst.Bin):
         self.add(blanksrc)
         srcpad = blanksrc.get_pad('src')
         srcpad.link(addersinkpad)
-        logger.debug("iterating through " + str(len(speakers)) + " speakers.")
+        logger.info("iterating through " + str(len(speakers)) + " speakers.")
         for speaker in speakers:
             vol = calculate_volume(speaker, listener)
             uri = None
