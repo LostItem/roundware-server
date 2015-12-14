@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>Listening Map</title>
+    <link href="css/rw-listen-map.css" rel="stylesheet" type="text/css"/>
+
+    <!-- FONT inclusions -->
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text&subset=latin' rel='stylesheet' type='text/css'/>
+</head>
+
+
+<body>
+<div id="header">
+    <!-- <img src="images/deyoung@2x.png" /> -->
+</div>
+
+<div id="main" role="main">
+    <div id="content">
+        <div class="full-float-block">
+            <h1><p>Roundware Listening Map</p></h1>
+            <div id="listen-controls" style="display:none">
+
+                <div id="jquery_jplayer_1" class="jp-jplayer"></div>
+                <div id="jp_container_1" class="jp-audio">
+                    <div class="jp-type-single">
+                        <div class="jp-gui jp-interface">
+                            <div class="jp-controls">
+                                <div class="jp-play btn-jplayer">Listen</div>
+                                <div class="jp-pause btn-jplayer">Pause</div>
+                            </div>
+                        </div>
+                        <div class="jp-no-solution">
+                            <span>Update Required</span>
+                            To play the media you will need to either update your browser to a recent version or update
+                            your <a href="http://get.adobe.com/flashplayer/" target="_blank">Flash plugin</a>.
+                        </div>
+                    </div>
+                </div>
+                <div id="spinner-1" class="spinner"><img src="images/ajax-loader.gif"/><span><em>Updating the
+                    stream...</em><span></div>
+            </div>
+
+            <div id="voicemap-loading">
+                <h1>Loading data... please be patient. </h1>
+            </div>
+            <div id="voicemap-block"></div>
+
+            <div id="voicemap-nav" style="display: none">
+                <!-- <ul><li><label><input type="radio" name="tag_boolean" value="and" id="tag_boolean_and"/> and</label></li>
+                <li><label><input type="radio" name="tag_boolean" value="or" id="tag_boolean_or" checked/> or</label></li></ul> -->
+            </div>
+            <!-- <h2 id="project-config-toggle">Project Config</h2>
+            <div id="project-config" style="display: none"></div> -->
+            <div class="clear"></div>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+    <div class="clear"></div>
+    <div id="footer" class="clearfix"></div>
+</div>
+</body>
+
+<script src="http://maps.google.com/maps/api/js?sensor=true" type="text/javascript"></script>
+<script type='text/javascript' src='js/jquery-1.11.0.js'></script>
+<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+<script type="text/javascript" src="js/listen-map.js"></script>
+
+<script type="text/javascript">
+
+    // deYoung
+    var centerLat = 37.771129;
+    var centerLon = -122.468739;
+
+
+    $(function () {
+//@@	AudioPlayer.setup("js/player.swf", {
+//@@		width: 290,
+//@@		transparentpagebg:"yes",
+//@@		encode: "no"
+//@@	});
+
+        // US coordinates
+        //var centerLat = 39;
+        //var centerLon = -100;
+
+        // Puke Ariki
+        //var centerLat = -39.05700;
+        //var centerLon = 174.07266;
+
+        var myOptions = {
+            scrollwheel: false,
+            zoom: 19,
+            center: new google.maps.LatLng(centerLat, centerLon),
+            mapTypeId: google.maps.MapTypeId.ROADMAP //HYBRID, TERRAIN, SATELLITE
+        };
+
+        var demoMap = new google.maps.Map(document.getElementById("voicemap-block"), myOptions);
+
+        var lm = new Roundware.ListenMap({url: "proxy.php"});
+        lm.main(1, demoMap);
+
+    });
+</script>
+
+</html>
