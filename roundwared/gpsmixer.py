@@ -84,11 +84,20 @@ class GPSMixer (gst.Bin):
 
         self.listener = new_listener
 
-        for speaker in self.current_speakers:
-            vol = calculate_volume(speaker, self.listener)
-            self.speakers[speaker.id] = speaker
-            logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
+        current_speakers = self.current_speakers
+
+        for id, speaker in self.speakers.items():
             source = self.sources.get(speaker.id, None)
+
+            if speaker in current_speakers:
+                vol = calculate_volume(speaker, self.listener)
+                self.speakers[speaker.id] = speaker
+                logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
+            else:
+                # set speakers that are not in range to minvolume
+                vol = speaker.minvolume
+                if vol == 0:
+                    del self.speakers[speaker.id]
 
             if vol > 0:
                 if not source:
