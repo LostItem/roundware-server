@@ -400,55 +400,23 @@ Roundware.ListenMap = function (opts) {
      * add speakers to the map
      */
     function map_speakers() {
+
+
         $.each(config.speakers, function (i, item) {
-
-            var marker_div = '<div class="markerDiv"><h1>Speaker ID: ' + item.id + '</h1><h2><a href="' + item.uri + '">' + item.uri + '</a></h2><h2>min distance: ' + item.mindistance + '</h2><h2>max distance: ' + item.maxdistance + '</h2><audio controls="controls"><source src="' + item.uri + '" type="audio/mpeg" /><source src="' + item.uri + '" type="audio/wav" /><object type="application/x-shockwave-flash" data="js/player.swf" id="audioplayer' + item.id + '" height="24" width="290"><param name="movie" value="js/player.swf"><param name="FlashVars" value="playerID=' + item.id + '&amp;soundFile=' + item.uri + '"><param name="quality" value="high"><param name="menu" value="false"><param name="wmode" value="transparent"></object></audio></div>';
-
-            var iw = new google.maps.InfoWindow({
-                content: marker_div
+            map.data.addGeoJson({
+                "type": "Feature",
+                "geometry": item.shape,
+                "properties": {
+                    "speaker_id": item.id
+                }
             });
-
-            var marker = create_marker(item, iw, 'yellow');
-
-            var circle = {
-                strokeColor: '#111111',
-                strokeOpacity: 0.8,
-                strokeWeight: 1,
-                fillColor: '#111111',
-                fillOpacity: 0.25,
-                map: map,
-                center: new google.maps.LatLng(item.latitude, item.longitude),
-                radius: item.maxdistance
-            };
-            marker.circle = new google.maps.Circle(circle);
-        });
-
-
-        $.each(config.speakers.features, function (i, item) {
-
-            // var speakerpoly = config.speakers;
-            console.log(item);
-            map.data.addGeoJson(item);
-
-            // var marker_div = '<div class="markerDiv"><h1>Speaker ID: '+item.id+'</h1><h2><a href="'+item.uri+'">'+item.uri+'</a></h2><h2>min distance: '+item.mindistance+'</h2><h2>max distance: '+item.maxdistance+'</h2><audio controls="controls"><source src="'+ item.uri +'" type="audio/mpeg" /><source src="'+ item.uri +'" type="audio/wav" /><object type="application/x-shockwave-flash" data="js/player.swf" id="audioplayer'+item.id+'" height="24" width="290"><param name="movie" value="js/player.swf"><param name="FlashVars" value="playerID='+item.id+'&amp;soundFile='+ item.uri +'"><param name="quality" value="high"><param name="menu" value="false"><param name="wmode" value="transparent"></object></audio></div>';
-
-            // var iw = new google.maps.InfoWindow({
-            // 	content: marker_div
-            // });
-
-            // var marker = create_marker(item, iw, 'yellow');
-
-            // var circle = {
-            // 	strokeColor: '#111111',
-            // 	strokeOpacity: 0.8,
-            // 	strokeWeight: 1,
-            // 	fillColor: '#111111',
-            // 	fillOpacity: 0.25,
-            // 	map: map,
-            // 	center: new google.maps.LatLng(item.latitude, item.longitude),
-            // 	radius: item.maxdistance
-            // 	};
-            // marker.circle = new google.maps.Circle(circle);
+            map.data.addGeoJson({
+                "type": "Feature",
+                "geometry": item.attenuation_border,
+                "properties": {
+                    "speaker_id": item.id
+                }
+            });
         });
 
         main_callback();
