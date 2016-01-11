@@ -6,7 +6,7 @@ from django.db import models, migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('rw', '0015_project_out_of_range_distance'),
+        ('rw', '0013_speaker_geometry'),
     ]
 
     operations = [
