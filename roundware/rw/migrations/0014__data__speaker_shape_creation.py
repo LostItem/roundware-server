@@ -4,6 +4,16 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 
 
+def calculate_attenuation_distance(apps, schema_editor):
+    """
+    Calculate new attenuation_distance from old min/max distance values
+    """
+    Speaker = apps.get_model("rw", "speaker")
+    for speaker in Speaker.objects.all():
+        if not speaker.attenuation_distance:
+            speaker.attenuation_distance = speaker.maxdistance - speaker.mindistance
+            speaker.save()
+
 def save_speakers(apps, schema_editor):
     """save speakers to generate derivative shapes after updating the `shape` attribute
     """
@@ -17,6 +27,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(calculate_attenuation_distance),
         migrations.RunSQL(
                 "UPDATE rw_speaker SET shape = ST_Multi(ST_Buffer(ST_MakePoint(longitude, latitude)::geography, maxdistance)::geometry)::geography;"
         ),
