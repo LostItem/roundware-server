@@ -18,7 +18,9 @@ def save_speakers(apps, schema_editor):
     """save speakers to generate derivative shapes after updating the `shape` attribute
     """
     Speaker = apps.get_model("rw", "Speaker")
-    for speaker in Speaker.objects.iterator():
+    for speaker in Speaker.objects.all():
+        # tell the speaker its shape has changed
+        speaker.boundary = speaker.shape.boundary
         speaker.save()
 
 class Migration(migrations.Migration):
@@ -29,7 +31,9 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(calculate_attenuation_distance),
         migrations.RunSQL(
-                "UPDATE rw_speaker SET shape = ST_Multi(ST_Buffer(ST_MakePoint(longitude, latitude)::geography, maxdistance)::geometry)::geography;"
+                "UPDATE rw_speaker SET "
+                "shape = ST_Multi(ST_Buffer(ST_MakePoint(longitude, latitude)::geography, maxdistance)::geometry)::geography,"
+                "attenuation_border = ST_Boundary(ST_Buffer(shape, -attenuation_distance)::geometry)::geography;"
         ),
         migrations.RunPython(save_speakers)
     ]
