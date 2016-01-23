@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class GPSMixer (gst.Bin):
 
     def __init__(self, listener, speakers):
+        logger.debug("initializing GPSMixer")
         gst.Bin.__init__(self)
         self.sources = {}
         self.speakers = {}
@@ -116,6 +117,7 @@ class GPSMixer (gst.Bin):
                 source.set_volume(vol)
                 src_to_remove = source.get_pad('src')
                 sinkpad = self.adder.get_request_pad("sink%d")
+                src_to_remove.unlink(sinkpad)
                 self.adder.release_request_pad(sinkpad)
                 self.remove(src_to_remove)
                 logger.debug("Removed speaker: %s" % speaker.id)
