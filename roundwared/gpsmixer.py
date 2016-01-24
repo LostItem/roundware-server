@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class GPSMixer (gst.Bin):
 
     def __init__(self, listener, speakers):
+
         logger.debug("initializing GPSMixer")
         gst.Bin.__init__(self)
         self.sources = {}
@@ -71,13 +72,17 @@ class GPSMixer (gst.Bin):
                 logger.debug("appending")
                 self.sources[speaker.id] = None
             self.speakers[speaker.id] = speaker
+
+        self.projects = set([speaker.project for _, speaker in self.speakers.items()])
         self.move_listener(listener)
 
     @property
     def current_speakers(self):
         logger.info("filtering speakers")
         listener = Point(float(self.listener['longitude']), float(self.listener['latitude']))
-        speakers = Speaker.objects.filter(id__in=self.speakers.keys(), shape__dwithin=(listener, D(m=0)))
+        speakers = Speaker.objects.filter(shape__dwithin=(listener, D(m=0)))
+        if self.projects:
+            speakers = speakers.filter(project__in=self.projects)
         logger.info(speakers)
         return list(speakers)
 
@@ -87,14 +92,19 @@ class GPSMixer (gst.Bin):
 
         current_speakers = self.current_speakers
 
-        for id, speaker in self.speakers.items():
+        for speaker in current_speakers:
+            if self.speakers.get(speaker.id, False):
+                # if don't already have this speaker in the mix
+                self.speakers[speaker.id] = speaker
+
+        for _, speaker in self.speakers.items():
             source = self.sources.get(speaker.id, None)
 
             if speaker in current_speakers:
                 vol = calculate_volume(speaker, self.listener)
-                self.speakers[speaker.id] = speaker
                 logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
             else:
+                logger.debut("speaker not in current_speakers")
                 # set speakers that are not in range to minvolume
                 vol = speaker.minvolume
                 if vol == 0:
