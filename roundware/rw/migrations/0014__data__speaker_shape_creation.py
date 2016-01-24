@@ -31,9 +31,8 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(calculate_attenuation_distance),
         migrations.RunSQL(
-                "UPDATE rw_speaker SET "
-                "shape = ST_Multi(ST_Buffer(ST_MakePoint(longitude, latitude)::geography, maxdistance)::geometry)::geography,"
-                "attenuation_border = ST_Boundary(ST_Buffer(shape, -attenuation_distance)::geometry)::geography;"
+                "UPDATE rw_speaker SET shape = ST_Multi(ST_Buffer(ST_MakePoint(longitude, latitude)::geography, maxdistance)::geometry)::geography;"
+                "UPDATE rw_speaker SET attenuation_border = ST_Boundary(ST_Buffer(shape, -attenuation_distance)::geometry)::geography;"
         ),
         migrations.RunPython(save_speakers)
     ]
