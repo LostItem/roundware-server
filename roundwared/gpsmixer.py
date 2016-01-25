@@ -76,6 +76,33 @@ class GPSMixer (gst.Bin):
         self.projects = set([speaker.project for _, speaker in self.speakers.items()])
         self.move_listener(listener)
 
+    def remove_source_from_stream(self, source):
+
+        source.set_volume(0)
+        src_to_remove = source.get_pad('src')
+        sinkpad = self.adder.get_request_pad("sink%d")
+        src_to_remove.unlink(sinkpad)
+        self.adder.release_request_pad(sinkpad)
+        self.remove(src_to_remove)
+
+    def add_speaker_to_stream(self, speaker, volume):
+        logger.debug("Allocating new source")
+        tempsrc = src_mp3_stream.SrcMP3Stream(speaker.uri, volume)
+        source = tempsrc
+        self.add(source)
+        srcpad = source.get_pad('src')
+        addersinkpad = self.adder.get_request_pad('sink%d')
+        srcpad.link(addersinkpad)
+
+    def set_speaker_volume(self, speaker, volume):
+        source = self.sources.get(speaker.id, None)
+
+        if not source:
+            self.add_speaker_to_stream(speaker, volume)
+        else:
+            logger.debug("already added, setting vol: " + str(volume))
+            source.set_volume(volume)
+
     @property
     def current_speakers(self):
         logger.info("filtering speakers")
@@ -98,40 +125,23 @@ class GPSMixer (gst.Bin):
                 self.speakers[speaker.id] = speaker
 
         for _, speaker in self.speakers.items():
-            source = self.sources.get(speaker.id, None)
 
             if speaker in current_speakers:
                 vol = calculate_volume(speaker, self.listener)
                 logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
+
             else:
-                logger.debut("speaker not in current_speakers")
+                logger.debug("speaker not in current_speakers, removing from stream")
                 # set speakers that are not in range to minvolume
                 vol = speaker.minvolume
                 if vol == 0:
                     del self.speakers[speaker.id]
 
-            if vol > 0:
-                if not source:
-                    logger.debug("Allocating new source")
-                    tempsrc = src_mp3_stream.SrcMP3Stream(speaker.uri, vol)
-                    source = tempsrc
-                    self.add(source)
-                    srcpad = source.get_pad('src')
-                    addersinkpad = self.adder.get_request_pad('sink%d')
-                    srcpad.link(addersinkpad)
-                else:
-                    logger.debug("already added, setting vol: " + str(vol))
-                    source.set_volume(vol)
-
-            elif source:
-                source.set_volume(vol)
-                src_to_remove = source.get_pad('src')
-                sinkpad = self.adder.get_request_pad("sink%d")
-                src_to_remove.unlink(sinkpad)
-                self.adder.release_request_pad(sinkpad)
-                self.remove(src_to_remove)
+            if vol == 0:
+                self.remove_speaker_from_stream(speaker)
                 logger.debug("Removed speaker: %s" % speaker.id)
-
+            else:
+                self.set_speaker_volume(speaker, vol)
 
 
 def lg(x):
