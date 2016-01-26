@@ -81,13 +81,16 @@ class GPSMixer (gst.Bin):
 
         if not source:
             return
-
+        logger.debug("fading audio to 0 before removing")
         source.set_volume(0)
         src_to_remove = source.get_pad('src')
         sinkpad = self.adder.get_request_pad("sink%d")
         src_to_remove.unlink(sinkpad)
         self.adder.release_request_pad(sinkpad)
         self.remove(src_to_remove)
+
+        del self.sources[speaker.id]
+
 
     def add_speaker_to_stream(self, speaker, volume):
         logger.debug("Allocating new source")
@@ -111,7 +114,7 @@ class GPSMixer (gst.Bin):
     def current_speakers(self):
         logger.info("filtering speakers")
         listener = Point(float(self.listener['longitude']), float(self.listener['latitude']))
-        speakers = Speaker.objects.filter(shape__dwithin=(listener, D(m=0)))
+        speakers = Speaker.objects.filter(shape__dwithin=(listener, D(m=0)), activeyn=True)
         if self.projects:
             speakers = speakers.filter(project__in=self.projects)
         logger.info(speakers)
@@ -142,7 +145,7 @@ class GPSMixer (gst.Bin):
                     del self.speakers[speaker.id]
 
             if vol == 0:
-                self.remove_source_from_stream(speaker)
+                self.remove_speaker_from_stream(speaker)
                 logger.debug("Removed speaker: %s" % speaker.id)
             else:
                 self.set_speaker_volume(speaker, vol)
