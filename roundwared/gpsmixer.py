@@ -76,7 +76,11 @@ class GPSMixer (gst.Bin):
         self.projects = set([speaker.project for _, speaker in self.speakers.items()])
         self.move_listener(listener)
 
-    def remove_source_from_stream(self, source):
+    def remove_source_from_stream(self, speaker):
+        source = self.sources.get(speaker.id, None)
+
+        if not source:
+            return
 
         source.set_volume(0)
         src_to_remove = source.get_pad('src')
@@ -138,7 +142,7 @@ class GPSMixer (gst.Bin):
                     del self.speakers[speaker.id]
 
             if vol == 0:
-                self.remove_speaker_from_stream(speaker)
+                self.remove_source_from_stream(speaker)
                 logger.debug("Removed speaker: %s" % speaker.id)
             else:
                 self.set_speaker_volume(speaker, vol)
