@@ -125,11 +125,15 @@ class GPSMixer (gst.Bin):
         self.listener = new_listener
 
         current_speakers = self.current_speakers
-
+        logger.info(current_speakers)
         for speaker in current_speakers:
-            if self.speakers.get(speaker.id, False):
+            logger.debug("entered current_speakers for loop") # this is run when re-entering speaker range
+            if self.speakers.get(speaker.id, True):
                 # if don't already have this speaker in the mix
                 self.speakers[speaker.id] = speaker
+                logger.debug("speaker added to self.speakers") # this isn't getting run when re-entering speaker range unless change above to True
+                logger.debug(speaker)
+                logger.debug(self.speakers)
 
         for _, speaker in self.speakers.items():
 
@@ -143,9 +147,12 @@ class GPSMixer (gst.Bin):
                 vol = speaker.minvolume
                 if vol == 0:
                     del self.speakers[speaker.id]
+                    self.set_speaker_volume(speaker, vol)
+                    logger.debug(self.speakers)
+                    return
 
             if vol == 0:
-                self.remove_speaker_from_stream(speaker)
+                self.remove_speaker_from_stream(speaker) # trying to remove speaker twice?
                 logger.debug("Removed speaker: %s" % speaker.id)
             else:
                 self.set_speaker_volume(speaker, vol)
