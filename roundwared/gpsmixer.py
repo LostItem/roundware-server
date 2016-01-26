@@ -127,7 +127,7 @@ class GPSMixer (gst.Bin):
         current_speakers = self.current_speakers
 
         for speaker in current_speakers:
-            if self.speakers.get(speaker.id, False):
+            if self.speakers.get(speaker.id, True):
                 # if don't already have this speaker in the mix
                 self.speakers[speaker.id] = speaker
 
@@ -143,6 +143,8 @@ class GPSMixer (gst.Bin):
                 vol = speaker.minvolume
                 if vol == 0:
                     del self.speakers[speaker.id]
+                    self.set_speaker_volume(speaker, vol)
+                    return
 
             if vol == 0:
                 self.remove_speaker_from_stream(speaker)
