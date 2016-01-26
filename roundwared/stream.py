@@ -36,7 +36,7 @@ class RoundStream:
             'project').get(id=sessionid)
         self.project = session.project
         if self.project.geo_listen_enabled and (
-                self.request['latitude'] is False or self.request['longitude'] is False):
+                        self.request.get('latitude') is False or self.request.get('longitude') is False):
             raise Exception("Lat and Lon not provided for geo_listen project, {}".format(self.project.name))
 
         self.radius = self.project.recording_radius
