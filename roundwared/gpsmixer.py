@@ -76,7 +76,7 @@ class GPSMixer (gst.Bin):
         self.projects = set([speaker.project for _, speaker in self.speakers.items()])
         self.move_listener(listener)
 
-    def remove_source_from_stream(self, speaker):
+    def remove_speaker_from_stream(self, speaker):
         source = self.sources.get(speaker.id, None)
 
         if not source:
