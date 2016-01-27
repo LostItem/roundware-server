@@ -121,9 +121,7 @@ class GPSMixer (gst.Bin):
         return list(speakers)
 
     def move_listener(self, new_listener):
-
         self.listener = new_listener
-
         current_speakers = self.current_speakers
 
         for speaker in current_speakers:
@@ -144,13 +142,8 @@ class GPSMixer (gst.Bin):
                 if vol == 0:
                     del self.speakers[speaker.id]
                     self.set_speaker_volume(speaker, vol)
-                    return
 
-            if vol == 0:
-                self.remove_speaker_from_stream(speaker)
-                logger.debug("Removed speaker: %s" % speaker.id)
-            else:
-                self.set_speaker_volume(speaker, vol)
+            self.set_speaker_volume(speaker, vol)
 
 
 def lg(x):
