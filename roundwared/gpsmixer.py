@@ -6,6 +6,8 @@ from __future__ import unicode_literals
 import gobject
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+from django.db.models import Q
+
 from roundware.rw.models import calculate_volume, Speaker
 
 gobject.threads_init()
@@ -21,13 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 class GPSMixer (gst.Bin):
+    def __init__(self, listener, project):
 
-    def __init__(self, listener, speakers):
+        self.listener = listener
+        self.project = project
+
+        self.sources = {}
+        self.speakers = {}
+        self.known_speakers = {}
+
+        self.get_current_speakers()
 
         logger.debug("initializing GPSMixer")
         gst.Bin.__init__(self)
-        self.sources = {}
-        self.speakers = {}
+
         self.adder = gst.element_factory_make("adder")
         self.add(self.adder)
         pad = self.adder.get_pad("src")
@@ -39,42 +48,33 @@ class GPSMixer (gst.Bin):
         self.add(blanksrc)
         srcpad = blanksrc.get_pad('src')
         srcpad.link(addersinkpad)
-        logger.info("iterating through " + str(len(speakers)) + " speakers.")
-        for speaker in speakers:
+
+        for _, speaker in self.speakers.items():
             vol = calculate_volume(speaker, listener)
-            uri = None
+
+            if vol > 0:
+                self.add_speaker_to_stream(speaker, vol)
+
+            self.speakers[speaker.id] = speaker
+
+        self.move_listener(listener)
+
+    def inspect_speaker(self, speaker):
+
+        if not self.known_speakers.get(speaker.id, False):
             if check_stream(speaker.uri):
                 uri = speaker.uri
                 logger.debug("taking normal uri: " + uri)
             elif check_stream(speaker.backupuri):
                 uri = speaker.backupuri
-                logger.warning("Stream " + speaker.uri
-                               + " is not a valid audio/mpeg stream."
-                               + " using backup.")
+                logger.warning("Stream " + speaker.uri + " is not a valid audio/mpeg stream. using backup.")
             else:
-                logger.warning("Stream " + speaker.uri
-                               + " and backup "
-                               #+ speaker['backupuri']
-                               + " are not valid audio/mpeg streams."
-                               + " Not adding anything.")
-                continue
+                logger.warning("Stream " + speaker.uri + " and backup are not valid audio/mpeg streams.")
+                uri = None
 
-            logger.debug("vol is " + str(vol) + " for uri " + uri)
-            if vol > 0:
-                logger.debug("adding to bin")
-                src = src_mp3_stream.SrcMP3Stream(uri, vol)
-                self.add(src)
-                srcpad = src.get_pad('src')
-                addersinkpad = self.adder.get_request_pad('sink%d')
-                srcpad.link(addersinkpad)
-                self.sources[speaker.id] = src
-            else:
-                logger.debug("appending")
-                self.sources[speaker.id] = None
-            self.speakers[speaker.id] = speaker
+            self.known_speakers[speaker.id] = {'speaker': speaker, 'uri': uri}
 
-        self.projects = set([speaker.project for _, speaker in self.speakers.items()])
-        self.move_listener(listener)
+        return self.known_speakers.get(speaker.id)
 
     def remove_speaker_from_stream(self, speaker):
         source = self.sources.get(speaker.id, None)
@@ -93,13 +93,18 @@ class GPSMixer (gst.Bin):
         del self.speakers[speaker.id]
 
     def add_speaker_to_stream(self, speaker, volume):
-        logger.debug("Allocating new source")
-        tempsrc = src_mp3_stream.SrcMP3Stream(speaker.uri, volume)
-        source = tempsrc
-        self.add(source)
-        srcpad = source.get_pad('src')
-        addersinkpad = self.adder.get_request_pad('sink%d')
-        srcpad.link(addersinkpad)
+        validated_speaker = self.inspect_speaker(speaker)
+        if validated_speaker['uri']:
+            logger.debug("Allocating new source")
+            tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
+            source = tempsrc
+            self.add(source)
+            srcpad = source.get_pad('src')
+            addersinkpad = self.adder.get_request_pad('sink%d')
+            srcpad.link(addersinkpad)
+
+            self.speakers[speaker.id] = speaker
+            self.sources[speaker.id] = source
 
     def set_speaker_volume(self, speaker, volume):
         source = self.sources.get(speaker.id, None)
@@ -110,24 +115,29 @@ class GPSMixer (gst.Bin):
             logger.debug("already added, setting vol: " + str(volume))
             source.set_volume(volume)
 
-    @property
-    def current_speakers(self):
+    def get_current_speakers(self):
         logger.info("filtering speakers")
         listener = Point(float(self.listener['longitude']), float(self.listener['latitude']))
-        speakers = Speaker.objects.filter(shape__dwithin=(listener, D(m=0)), activeyn=True)
-        if self.projects:
-            speakers = speakers.filter(project__in=self.projects)
+
+        # get active speakers for this project, and select from those all speakers our listener is inside
+        # and additionally all speakers with a minvolume greater than 0
+        speakers = Speaker.objects.filter(activeyn=True, project=self.project).filter(
+            Q(shape__dwithin=(listener, D(m=0))) | Q(minvolume__gt=0)
+        )
+
         logger.info(speakers)
+
+        # make sure all the current speakers are registered in the self.speakers dict
+        for s in speakers.iterator():
+            self.speakers[s.id] = s
+
         return list(speakers)
 
     def move_listener(self, new_listener):
 
         self.listener = new_listener
 
-        current_speakers = self.current_speakers
-
-        for speaker in current_speakers:
-            self.speakers[speaker.id] = speaker
+        current_speakers = self.get_current_speakers()
 
         for _, speaker in self.speakers.items():
 
