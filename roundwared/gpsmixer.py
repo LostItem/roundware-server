@@ -2,9 +2,7 @@
 # See COPYRIGHT.txt, AUTHORS.txt, and LICENSE.txt in the project root directory.
 
 from __future__ import unicode_literals
-
 import gobject
-import time
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.db.models import Q
@@ -75,13 +73,21 @@ class GPSMixer (gst.Bin):
             return
 
         logger.debug("fading audio to 0 before removing")
-        source.set_volume(0)
-        src_to_remove = source.get_pad('src')
+        self.sources[speaker.id].set_volume(0.0)
+
+        src_to_remove = self.sources[speaker.id].get_pad('src')
+        logger.debug("\t...finding sinkpad")
         sinkpad = self.adder.get_request_pad("sink%d")
+        logger.debug("\t...unlinking sinkpad")
+
         src_to_remove.unlink(sinkpad)
+        logger.debug("\t...releasing sinkpad")
         self.adder.release_request_pad(sinkpad)
+        logger.debug("\t...removing source")
+
         self.remove(src_to_remove)
 
+        logger.debug("\t...removing source")
         self.sources[speaker.id] = None
 
 
@@ -90,19 +96,25 @@ class GPSMixer (gst.Bin):
         if validated_speaker['uri']:
             tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
             self.sources[speaker.id] = tempsrc
-            logger.debug("Allocated new source: {}".format(self.sources[speaker.id]))
+            logger.debug(
+                "Allocated new source: {src} {uri}".format(src=self.sources[speaker.id], uri=validated_speaker['uri']))
 
             logger.debug("Adding speaker: {} ".format(speaker.id))
 
             self.add(self.sources[speaker.id])
+            logger.debug("\t...finding srcpad")
             srcpad = self.sources[speaker.id].get_pad('src')
+            logger.debug("\t...finding addersinkpad")
+
             addersinkpad = self.adder.get_request_pad('sink%d')
+            logger.debug("\t...linking addersinkpad")
+
             srcpad.link(addersinkpad)
 
             # see if the state changes at all...
-            current_state = self.sources[speaker.id].get_state()
-            logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
-                                                                             current_state=current_state))
+            # current_state = self.sources[speaker.id].get_state()
+            # logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
+            #                                                                  current_state=current_state))
             self.speakers[speaker.id] = speaker
         else:
             logger.debug("No valid uri for speaker")
@@ -114,7 +126,7 @@ class GPSMixer (gst.Bin):
             self.add_speaker_to_stream(speaker, volume)
         else:
             logger.debug("already added, setting vol: " + str(volume))
-            source.set_volume(volume)
+            self.sources[speaker.id].set_volume(volume)
 
     def get_current_speakers(self):
         logger.info("filtering speakers")
