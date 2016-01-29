@@ -4,6 +4,7 @@
 from __future__ import unicode_literals
 
 import gobject
+import time
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.db.models import Q
@@ -23,19 +24,17 @@ logger = logging.getLogger(__name__)
 
 
 class GPSMixer (gst.Bin):
-    def __init__(self, listener, project):
 
-        self.listener = listener
+    def __init__(self, listener, project):
+        gst.Bin.__init__(self)
+
         self.project = project
 
         self.sources = {}
         self.speakers = {}
         self.known_speakers = {}
 
-        self.get_current_speakers()
-
         logger.debug("initializing GPSMixer")
-        gst.Bin.__init__(self)
 
         self.adder = gst.element_factory_make("adder")
         self.add(self.adder)
@@ -48,14 +47,6 @@ class GPSMixer (gst.Bin):
         self.add(blanksrc)
         srcpad = blanksrc.get_pad('src')
         srcpad.link(addersinkpad)
-
-        for _, speaker in self.speakers.items():
-            vol = calculate_volume(speaker, listener)
-
-            if vol > 0:
-                self.add_speaker_to_stream(speaker, vol)
-
-            self.speakers[speaker.id] = speaker
 
         self.move_listener(listener)
 
@@ -78,9 +69,11 @@ class GPSMixer (gst.Bin):
 
     def remove_speaker_from_stream(self, speaker):
         source = self.sources.get(speaker.id, None)
+        self.speakers[speaker.id] = None
 
         if not source:
             return
+
         logger.debug("fading audio to 0 before removing")
         source.set_volume(0)
         src_to_remove = source.get_pad('src')
@@ -89,22 +82,35 @@ class GPSMixer (gst.Bin):
         self.adder.release_request_pad(sinkpad)
         self.remove(src_to_remove)
 
-        del self.sources[speaker.id]
-        del self.speakers[speaker.id]
+        self.sources[speaker.id] = None
+
 
     def add_speaker_to_stream(self, speaker, volume):
         validated_speaker = self.inspect_speaker(speaker)
         if validated_speaker['uri']:
-            logger.debug("Allocating new source")
             tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
-            source = tempsrc
-            self.add(source)
-            srcpad = source.get_pad('src')
+            self.sources[speaker.id] = tempsrc
+            logger.debug("Allocated new source: {}".format(self.sources[speaker.id]))
+
+            logger.debug("Adding speaker: {} ".format(speaker.id))
+
+            self.add(self.sources[speaker.id])
+            srcpad = self.sources[speaker.id].get_pad('src')
             addersinkpad = self.adder.get_request_pad('sink%d')
             srcpad.link(addersinkpad)
 
+            # see if the state changes at all...
+            current_state = self.sources[speaker.id].get_state()
+            logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
+                                                                             current_state=current_state))
+            time.sleep(2)
+            current_state = self.sources[speaker.id].get_state()
+            logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
+                                                                             current_state=current_state))
+
             self.speakers[speaker.id] = speaker
-            self.sources[speaker.id] = source
+        else:
+            logger.debug("No valid uri for speaker")
 
     def set_speaker_volume(self, speaker, volume):
         source = self.sources.get(speaker.id, None)
@@ -128,7 +134,7 @@ class GPSMixer (gst.Bin):
         logger.info(speakers)
 
         # make sure all the current speakers are registered in the self.speakers dict
-        for s in speakers.iterator():
+        for s in speakers:
             self.speakers[s.id] = s
 
         return list(speakers)
@@ -147,13 +153,13 @@ class GPSMixer (gst.Bin):
                 # set speakers that are not in range to minvolume
                 vol = speaker.minvolume
 
-            logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
 
             if vol == 0:
-                logger.debug("Speaker is off, removing from stream")
+                logger.debug("Speaker {} is off, removing from stream".format(speaker.id))
                 self.remove_speaker_from_stream(speaker)
                 logger.debug("Removed speaker: %s" % speaker.id)
             else:
+                logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
                 self.set_speaker_volume(speaker, vol)
 
 

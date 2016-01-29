@@ -12,7 +12,7 @@ import time
 import urllib
 from django.conf import settings
 from roundware.rw import models
-from roundware.lib.api import log_event
+from roundware.api1.commands import log_event
 from roundwared.audiotrack import AudioTrack
 from roundwared import icecast2
 from roundwared import gpsmixer
@@ -121,6 +121,8 @@ class RoundStream:
     # Force the recording collection to get new recordings from the DB
     def refresh_recordings(self):
         self.recordingCollection.update_request(self.request)
+        for track in self.audiotracks:
+            track.move_listener(self.listener)
 
     def move_listener(self, request):
         if request['latitude'] and request['longitude']:
@@ -131,6 +133,8 @@ class RoundStream:
             if self.gps_mixer:
                 self.gps_mixer.move_listener(request)
             self.recordingCollection.move_listener(request)
+            for track in self.audiotracks:
+                track.move_listener(request)
         else:
             logger.debug("no lat and long. Returning...")
 
@@ -210,10 +214,11 @@ class RoundStream:
                     and not self.started:
                 logger.debug("Stream for session %d has started." % self.sessionid)
                 self.started = True
-                gobject.timeout_add(settings.PING_INTERVAL, self.ping)
-                self.recordingCollection.start()
+                gobject.timeout_add(
+                    settings.PING_INTERVAL,
+                    self.ping)
                 for track in self.audiotracks:
-                    track.start_audio()
+                    track.wait_and_play()
 
     def cleanup(self):
         log_event("cleanup_session", self.sessionid)
