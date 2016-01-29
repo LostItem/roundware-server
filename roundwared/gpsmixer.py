@@ -103,11 +103,6 @@ class GPSMixer (gst.Bin):
             current_state = self.sources[speaker.id].get_state()
             logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
                                                                              current_state=current_state))
-            time.sleep(2)
-            current_state = self.sources[speaker.id].get_state()
-            logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
-                                                                             current_state=current_state))
-
             self.speakers[speaker.id] = speaker
         else:
             logger.debug("No valid uri for speaker")

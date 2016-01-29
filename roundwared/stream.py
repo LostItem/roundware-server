@@ -176,8 +176,7 @@ class RoundStream:
         logger.debug("Got AudioTrack Settings: %s" % settings)
         self.audiotracks = []
         for setting in settings:
-            track = AudioTrack(self, self.pipeline, self.adder,
-                                           setting, self.recordingCollection)
+            track = AudioTrack(self, self.pipeline, self.adder, setting, self.recordingCollection)
             self.audiotracks.append(track)
 
         # TODO - ask if there is > 1 logical audiotrack per proj. for now, assume 1 to 1.
@@ -214,11 +213,10 @@ class RoundStream:
                     and not self.started:
                 logger.debug("Stream for session %d has started." % self.sessionid)
                 self.started = True
-                gobject.timeout_add(
-                    settings.PING_INTERVAL,
-                    self.ping)
+                gobject.timeout_add(settings.PING_INTERVAL, self.ping)
+                self.recordingCollection.start()
                 for track in self.audiotracks:
-                    track.wait_and_play()
+                    track.start_audio()
 
     def cleanup(self):
         log_event("cleanup_session", self.sessionid)
@@ -238,8 +236,7 @@ class RoundStream:
         return True
 
     def ping(self):
-        is_stream_active = self.is_anyone_listening() \
-            or self.is_activity_timestamp_recent()
+        is_stream_active = self.is_anyone_listening() or self.is_activity_timestamp_recent()
 
         if is_stream_active:
             return True
