@@ -151,8 +151,8 @@ class RoundStream:
     def add_speakers(self):
 
         speakers = models.Speaker.objects.filter(
-                project=self.project,
-                activeyn=True
+            project=self.project,
+            activeyn=True
         )
 
         # FIXME: We might need to unconditionally add blank-audio.
@@ -162,7 +162,7 @@ class RoundStream:
             self.gps_mixer = gpsmixer.GPSMixer(
                 {'latitude': self.request['latitude'],
                  'longitude': self.request['longitude']},
-                speakers)
+                self.project)
             self.add_source_to_adder(self.gps_mixer)
         else:
             self.add_source_to_adder(BlankAudioSrc())
