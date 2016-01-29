@@ -90,7 +90,7 @@ class GPSMixer (gst.Bin):
         self.remove(src_to_remove)
 
         del self.sources[speaker.id]
-
+        del self.speakers[speaker.id]
 
     def add_speaker_to_stream(self, speaker, volume):
         logger.debug("Allocating new source")
@@ -127,24 +127,20 @@ class GPSMixer (gst.Bin):
         current_speakers = self.current_speakers
 
         for speaker in current_speakers:
-            if self.speakers.get(speaker.id, False):
-                # if don't already have this speaker in the mix
-                self.speakers[speaker.id] = speaker
+            self.speakers[speaker.id] = speaker
 
         for _, speaker in self.speakers.items():
 
             if speaker in current_speakers:
                 vol = calculate_volume(speaker, self.listener)
-                logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
-
             else:
-                logger.debug("speaker not in current_speakers, removing from stream")
                 # set speakers that are not in range to minvolume
                 vol = speaker.minvolume
-                if vol == 0:
-                    del self.speakers[speaker.id]
+
+            logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
 
             if vol == 0:
+                logger.debug("Speaker is off, removing from stream")
                 self.remove_speaker_from_stream(speaker)
                 logger.debug("Removed speaker: %s" % speaker.id)
             else:
