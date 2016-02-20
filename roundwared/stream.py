@@ -75,6 +75,7 @@ class RoundStream:
 
         self.pipeline.set_state(gst.STATE_PLAYING)
         gobject.timeout_add(settings.STEREO_PAN_INTERVAL, self.stereo_pan)
+        logger.debug("starting main loop!")
         self.main_loop.run()
 
     def play_asset(self, request):
@@ -138,9 +139,14 @@ class RoundStream:
     # PRIVATE
     ######################################################################
     def add_message_watcher(self):
+        logger.debug("Getting bus.")
         self.bus = self.pipeline.get_bus()
+        logger.debug("Adding Signal Watch.")
         self.bus.add_signal_watch()
+        logger.debug("Connecting.")
         self.watch_id = self.bus.connect("message", self.get_message)
+        logger.debug("Success!")
+
 
     def add_source_to_adder(self, src_element):
         self.pipeline.add(src_element)
@@ -172,9 +178,10 @@ class RoundStream:
         logger.debug("Got AudioTrack Settings: %s" % settings)
         self.audiotracks = []
         for setting in settings:
+            logger.debug("Creating track: {}".format(setting))
             track = AudioTrack(self, self.pipeline, self.adder, setting, self.recordingCollection)
             self.audiotracks.append(track)
-
+        logger.debug("Done adding audiotracks.")
         # TODO - ask if there is > 1 logical audiotrack per proj. for now, assume 1 to 1.
         # self.audiotracks = \
             # map (lambda settings:

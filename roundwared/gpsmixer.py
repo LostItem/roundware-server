@@ -66,58 +66,48 @@ class GPSMixer (gst.Bin):
         return self.known_speakers.get(speaker.id)
 
     def remove_speaker_from_stream(self, speaker):
-        source = self.sources.get(speaker.id, None)
-        self.speakers[speaker.id] = None
-
-        if not source:
-            return
 
         logger.debug("fading audio to 0 before removing")
         self.sources[speaker.id].set_volume(0.0)
 
         src_to_remove = self.sources[speaker.id].get_pad('src')
+        logger.debug("\t...removing {}".format(src_to_remove))
         logger.debug("\t...finding sinkpad")
         sinkpad = self.adder.get_request_pad("sink%d")
-        logger.debug("\t...unlinking sinkpad")
 
+        logger.debug("\t...unlinking sinkpad")
         src_to_remove.unlink(sinkpad)
+
         logger.debug("\t...releasing sinkpad")
         self.adder.release_request_pad(sinkpad)
-        logger.debug("\t...removing source")
 
-        self.remove(src_to_remove)
-
-        logger.debug("\t...removing source")
-        self.sources[speaker.id] = None
+        logger.debug("\t...done!")
 
 
     def add_speaker_to_stream(self, speaker, volume):
-        validated_speaker = self.inspect_speaker(speaker)
-        if validated_speaker['uri']:
-            tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
-            self.sources[speaker.id] = tempsrc
-            logger.debug(
-                "Allocated new source: {src} {uri}".format(src=self.sources[speaker.id], uri=validated_speaker['uri']))
+        self.speakers[speaker.id] = speaker
+        source = self.sources.get(speaker.id, None)
+        if not source:
+            validated_speaker = self.inspect_speaker(speaker)
+            uri = validated_speaker['uri']
+            if uri:
+                tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
+                logger.debug("Allocated new source: {src} {uri}".format(src=tempsrc, uri=uri))
+                logger.debug("Adding speaker: {s} ".format(s=speaker.id))
+                self.sources[speaker.id] = tempsrc
 
-            logger.debug("Adding speaker: {} ".format(speaker.id))
-
-            self.add(self.sources[speaker.id])
-            logger.debug("\t...finding srcpad")
-            srcpad = self.sources[speaker.id].get_pad('src')
-            logger.debug("\t...finding addersinkpad")
-
-            addersinkpad = self.adder.get_request_pad('sink%d')
-            logger.debug("\t...linking addersinkpad")
-
-            srcpad.link(addersinkpad)
-
-            # see if the state changes at all...
-            # current_state = self.sources[speaker.id].get_state()
-            # logger.debug("current state of {source}: {current_state}".format(source=self.sources[speaker.id],
-            #                                                                  current_state=current_state))
-            self.speakers[speaker.id] = speaker
-        else:
-            logger.debug("No valid uri for speaker")
+                self.add(self.sources[speaker.id])
+                logger.debug("\t...finding srcpad")
+                srcpad = self.sources[speaker.id].get_pad('src')
+                logger.debug("\t...finding addersinkpad")
+                addersinkpad = self.adder.get_request_pad('sink%d')
+                logger.debug("\t...linking addersinkpad")
+                srcpad.link(addersinkpad)
+                logger.debug("\t...setting speaker state to PLAYING")
+                self.sources[speaker.id].set_state(gst.STATE_PLAYING)
+                logger.debug("\t...done!")
+            else:
+                logger.debug("No valid uri for speaker")
 
     def set_speaker_volume(self, speaker, volume):
         source = self.sources.get(speaker.id, None)
@@ -138,11 +128,10 @@ class GPSMixer (gst.Bin):
             Q(shape__dwithin=(listener, D(m=0))) | Q(minvolume__gt=0)
         )
 
-        logger.info(speakers)
-
         # make sure all the current speakers are registered in the self.speakers dict
         for s in speakers:
             self.speakers[s.id] = s
+            self.inspect_speaker(s)
 
         return list(speakers)
 
@@ -152,15 +141,17 @@ class GPSMixer (gst.Bin):
 
         current_speakers = self.get_current_speakers()
 
-        speakers_count = self.speakers.items().count()
+        speakers_count = len(self.speakers.keys())
         logger.debug("Processing {} speakers".format(speakers_count))
 
         for i, (_, speaker) in enumerate(self.speakers.items()):
-            logger.debug("Processing {} of {} speakers".format(i, speakers_count))
+            logger.debug("Processing speaker {} of {}".format(i + 1, speakers_count))
 
             if speaker in current_speakers:
+                logger.debug("Speaker {} is within range. Calculating volume...".format(speaker.id))
                 vol = calculate_volume(speaker, self.listener)
             else:
+                logger.debug("Speaker {} is out of range. Setting minvolume...".format(speaker.id))
                 # set speakers that are not in range to minvolume
                 vol = speaker.minvolume
 
