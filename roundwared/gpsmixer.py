@@ -31,6 +31,13 @@ class GPSMixer (gst.Bin):
         self.sources = {}
         self.speakers = {}
         self.known_speakers = {}
+        # find always on speakers
+        always_on = Speaker.objects.filter(activeyn=True, project=self.project, minvolume__gt=0)
+        if always_on.exists():
+            logger.debug("Found speakers that are always on: {}".format(always_on))
+            for speaker in always_on:
+                self.speakers[speaker.id] = speaker
+                self.inspect_speaker(speaker)
 
         logger.debug("initializing GPSMixer")
 
@@ -47,6 +54,7 @@ class GPSMixer (gst.Bin):
         srcpad.link(addersinkpad)
 
         self.move_listener(listener)
+
 
     def inspect_speaker(self, speaker):
 
@@ -65,10 +73,11 @@ class GPSMixer (gst.Bin):
 
         return self.known_speakers.get(speaker.id)
 
+
     def remove_speaker_from_stream(self, speaker):
 
         logger.debug("fading audio to 0 before removing")
-        self.sources[speaker.id].set_volume(0.0)
+        self.sources[speaker.id].set_volume(0)
 
         src_to_remove = self.sources[speaker.id].get_pad('src')
         logger.debug("\t...removing {}".format(src_to_remove))
@@ -85,13 +94,12 @@ class GPSMixer (gst.Bin):
 
 
     def add_speaker_to_stream(self, speaker, volume):
-        self.speakers[speaker.id] = speaker
         source = self.sources.get(speaker.id, None)
         if not source:
             validated_speaker = self.inspect_speaker(speaker)
             uri = validated_speaker['uri']
             if uri:
-                tempsrc = src_mp3_stream.SrcMP3Stream(validated_speaker['uri'], volume)
+                tempsrc = src_mp3_stream.SrcMP3Stream(uri, volume)
                 logger.debug("Allocated new source: {src} {uri}".format(src=tempsrc, uri=uri))
                 logger.debug("Adding speaker: {s} ".format(s=speaker.id))
                 self.sources[speaker.id] = tempsrc
@@ -113,17 +121,17 @@ class GPSMixer (gst.Bin):
         source = self.sources.get(speaker.id, None)
 
         if not source:
+            logger.debug("new speaker, adding to stream at {}".format(volume))
             self.add_speaker_to_stream(speaker, volume)
         else:
             logger.debug("already added, setting vol: " + str(volume))
-            self.sources[speaker.id].set_volume(volume)
+        self.sources[speaker.id].set_volume(volume)
 
     def get_current_speakers(self):
         logger.info("filtering speakers")
         listener = Point(float(self.listener['longitude']), float(self.listener['latitude']))
 
         # get active speakers for this project, and select from those all speakers our listener is inside
-        # and additionally all speakers with a minvolume greater than 0
         speakers = Speaker.objects.filter(activeyn=True, project=self.project).filter(
             Q(shape__dwithin=(listener, D(m=0))) | Q(minvolume__gt=0)
         )
@@ -139,13 +147,16 @@ class GPSMixer (gst.Bin):
 
         self.listener = new_listener
 
+        # lookup speakers that should play in the db
+        # and make sure they're in the self.speakers dict
+        # we use this set to id speakers that should be off
         current_speakers = self.get_current_speakers()
 
         speakers_count = len(self.speakers.keys())
         logger.debug("Processing {} speakers".format(speakers_count))
 
         for i, (_, speaker) in enumerate(self.speakers.items()):
-            logger.debug("Processing speaker {} of {}".format(i + 1, speakers_count))
+            logger.debug("Processing speaker %s of %s" % (i + 1, speakers_count))
 
             if speaker in current_speakers:
                 logger.debug("Speaker {} is within range. Calculating volume...".format(speaker.id))

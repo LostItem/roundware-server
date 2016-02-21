@@ -156,22 +156,17 @@ class RoundStream:
 
     def add_speakers(self):
 
-        speakers = models.Speaker.objects.filter(
-            project=self.project,
-            activeyn=True
-        )
-
         # FIXME: We might need to unconditionally add blank-audio.
         # what happens if the only speaker is out of range? I think
         # it'll be fine but test this.
-        if speakers.count() > 0:
-            self.gps_mixer = gpsmixer.GPSMixer(
+        self.add_source_to_adder(BlankAudioSrc())
+        self.gps_mixer = gpsmixer.GPSMixer(
                 {'latitude': self.request['latitude'],
                  'longitude': self.request['longitude']},
                 self.project)
-            self.add_source_to_adder(self.gps_mixer)
-        else:
-            self.add_source_to_adder(BlankAudioSrc())
+        time.sleep(1)
+
+        self.add_source_to_adder(self.gps_mixer)
 
     def add_audiotracks(self):
         settings = models.Audiotrack.objects.filter(project=self.project)
