@@ -156,7 +156,7 @@ class GPSMixer (gst.Bin):
         logger.debug("Processing {} speakers".format(speakers_count))
 
         for i, (_, speaker) in enumerate(self.speakers.items()):
-            logger.debug("Processing speaker %s of %s" % (i + 1, speakers_count))
+            logger.debug("Processing speaker {} of {}".format(i + 1, speakers_count))
 
             if speaker in current_speakers:
                 logger.debug("Speaker {} is within range. Calculating volume...".format(speaker.id))
@@ -169,9 +169,9 @@ class GPSMixer (gst.Bin):
             if vol == 0:
                 logger.debug("Speaker {} is off, removing from stream".format(speaker.id))
                 self.remove_speaker_from_stream(speaker)
-                logger.debug("Removed speaker: %s" % speaker.id)
+                logger.debug("Removed speaker: {}".format(speaker.id))
             else:
-                logger.debug("Source # %s has a volume of %s" % (speaker.id, vol))
+                logger.debug("Source # {} has a volume of {}".format(speaker.id, vol))
                 self.set_speaker_volume(speaker, vol)
 
         logger.debug("move listener complete")
