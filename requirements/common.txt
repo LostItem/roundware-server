@@ -1,12 +1,12 @@
-Django==1.9
+Django<1.10
 # Creates REST APIs
-djangorestframework==3.3.3
+djangorestframework<3.4
 # Used for DRF filtering
 django-filter==0.13
 # Used in roundware/rw/chart_functions.py
 django_chartit2
 # Used in roundware/rw/admin.py, roundware/rw/forms.py, roundware/rw/views, and more.
-django-guardian==1.4.4
+django-guardian<1.5
 # Used by roundware/api1/commands.py
 psutil==3.4.2
 # Used by roundwared/db.py
