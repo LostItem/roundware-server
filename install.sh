@@ -70,7 +70,7 @@ apache2 libapache2-mod-wsgi libav-tools mediainfo pacpl icecast2 \
 python-dev python-pip  python-dbus python-gst0.10 \
 gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
 gstreamer0.10-plugins-ugly gstreamer0.10-tools \
-binutils libproj-dev gdal-bin libgdal-dev \
+binutils libproj-dev gdal-bin libgdal1h libgdal-dev \
 postgresql-server-dev-9.3 postgresql-9.3-postgis-2.1
 
 # Install/upgrade virtualenv
