@@ -21,6 +21,7 @@ before_install:
 
 install:
   - pip install setuptools pip --upgrade
+  - pip install distribute --upgrade
   - pip install -r requirements/dev.txt --upgrade
 
 before_script:
