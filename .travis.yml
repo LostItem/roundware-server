@@ -42,7 +42,7 @@ before_script:
 # Setup rwmedia directory for mock files.
   - sudo mkdir /var/www
   - sudo chmod 777 /var/www
-  - export PYTHONPATH=${PYTHONPATH}:.:/usr/lib/python2.7/dist-packages/
+  - export PYTHONPATH=${PYTHONPATH}:.:/usr/lib/python2.7/dist-packages/:/home/travis/virtualenv/python2.7.12/lib/python2.7/site-packages
   - pip freeze | grep six
   - pip install six
   - pip freeze | grep six
