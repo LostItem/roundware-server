@@ -2,12 +2,13 @@ language: python
 addons:
   postgresql: "9.3"
   apt:
-    - postgresql-9.3-postgis-2.3
-    - python-dev
-    - build-essential
-    - python-dbus
-    - python-gst0.10
-    - python-setuptools
+    packages:
+      - postgresql-9.3-postgis-2.3
+      - python-dev
+      - build-essential
+      - python-dbus
+      - python-gst0.10
+      - python-setuptools
 
 dist: trusty
 sudo: required
