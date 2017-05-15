@@ -20,8 +20,7 @@ before_install:
   - sudo apt-get -y update
 
 install:
-  - pip install fiona
-  - pip install -r requirements/dev.txt
+  - pip install -r requirements/dev.txt --upgrade
 
 before_script:
   - sudo /etc/init.d/postgresql stop
