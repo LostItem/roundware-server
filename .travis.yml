@@ -41,6 +41,10 @@ before_script:
 # Setup rwmedia directory for mock files.
   - sudo mkdir /var/www
   - sudo chmod 777 /var/www
-  - export PYTHONPATH=${PYTHONPATH}/:.:/usr/lib/python2.7/dist-packages/
+  - export PYTHONPATH=${PYTHONPATH}:.:/usr/lib/python2.7/dist-packages/
+  - pip freeze | grep six
 
-script: python roundware/manage.py test --settings=roundware.settings.testing
+script:
+  - echo $PYTHONPATH
+
+  - python roundware/manage.py test --settings=roundware.settings.testing
