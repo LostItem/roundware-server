@@ -47,4 +47,4 @@ before_script:
 
 script:
   - echo $PYTHONPATH
-  - python -m roundware/manage.py test --settings=roundware.settings.testing
+  - python -m roundware.manage test --settings=roundware.settings.testing
