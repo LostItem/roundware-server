@@ -42,7 +42,9 @@ before_script:
 # Setup rwmedia directory for mock files.
   - sudo mkdir /var/www
   - sudo chmod 777 /var/www
+  - export PYTHONPATH=${PYTHONPATH}:/usr/lib/python2.7/dist-packages/:/home/travis/virtualenv/python2.7.12/lib/python2.7/site-packages
+
 
 script:
   - echo $PYTHONPATH
-  - python -m roundware.manage.py test --settings=roundware.settings.testing
+  - python -m roundware/manage.py test --settings=roundware.settings.testing
