@@ -25,6 +25,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements/common.txt
         pip install -r requirements/dev.txt
+        echo "::add-path::$(pwd)/roundware"
     - name: Run Tests
       run: |
         python roundware/manage.py test --settings=settings.test
