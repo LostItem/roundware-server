@@ -27,21 +27,21 @@ var jpCreator = function(id) { return '<div id="jquery_jplayer_' + id + '" class
 /**
  * Initializes jplayer on the given dom element.
  * @param id
- * @param {string} filename Audio file to be played. The extention will be parsed
+ * @param {string} media_url Audio file to be played. The extention will be parsed
  * in order to initialize jPlayer with the correct media player.
  * @param dom A copy of the dom element created with jpCreator
  * @param $ jQuery, passed in to avoid namespacing conflicts.
  */
-function createPlayer(id, filename, dom, $) {
+function createPlayer(id, media_url, dom, $) {
     var re = /.*\.(.{3,4})$/; // File extention = last 3-4 chars after last period.
-    var extension = filename.match(re);
+    var extension = media_url.match(re);
     if (!extension ) {
         console.log("Invalid or missing file extension.");
         return;
     }
     extension = extension[1];
     var setMediaObject = {};
-    setMediaObject[extension] = AUDIO_FILE_SERVER + filename;
+    setMediaObject[extension] = media_url;
 
     $(dom).jPlayer({
         preload: 'none',
@@ -55,7 +55,7 @@ function createPlayer(id, filename, dom, $) {
 }
 
 (function($) {
-    var filename;
+    var media_url;
     var id = 1;
 
     $(document).ready( function() {
@@ -68,10 +68,10 @@ function createPlayer(id, filename, dom, $) {
             // Create identifiers to tie buttons to <audio> elements.
             dom[0].id = 'jquery_jplayer_' + id;
             dom[1].id = 'jp_container_' + id;
-            filename = $(this).attr('data-filename');
-            if (filename && filename != 'None') {
+            media_url = $(this).attr('data-media-url');
+            if (media_url && media_url != 'None') {
                 $(that).append(dom);
-                createPlayer(id, filename, dom[0], $);
+                createPlayer(id, media_url, dom[0], $);
             }
             id++;
         });

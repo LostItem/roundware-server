@@ -16,7 +16,7 @@ jobs:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: mdillon/postgis:12
+        image: postgis/postgis:12-3.0
         ports:
           # will assign a random free host port
           - 5432:5432

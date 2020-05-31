@@ -1,3 +1,4 @@
+(function ($) {
 
 var next_tags_inserted_gets_copied_vals = false;
 var asset_set_selector = "div.dynamic-asset_set";
@@ -99,24 +100,23 @@ $(document).bind("DOMNodeInserted", function(e) {
             next_tags_inserted_gets_copied_vals = false;
         }
     }
-});
-
-
-$(document).ready(function() {
-    // move initial select assets field below inlines
-    var select_assets = $("div.form-row.assets");
-    $(select_assets).insertAfter($('#asset_set-group'));
-    // make it an accordion with a new header
-    $(select_assets).wrapAll("<div id='select_assets_wrapper' class='inline-group'/>");
-    $(select_assets).before('<h2>Select assets from list</h2>');
-    $('div#select_assets_wrapper').accordion({
-        header: 'h2', 
-        collapsible: true, 
-        active: false,   
     });
 
-
+    $(document).ready(function() {
+        // move initial select assets field below inlines
+        var select_assets = $("div.form-row.assets");
+        $(select_assets).insertAfter($('#asset_set-group'));
+        // make it an accordion with a new header
+        $(select_assets).wrapAll("<div id='select_assets_wrapper' class='inline-group'/>");
+        $(select_assets).before('<h2>Select assets from list</h2>');
+        $('div#select_assets_wrapper').accordion({
+            header: 'h2',
+            collapsible: true,
+            active: false,
+        });
     // set up accordion on Assets
-    buildAssetAccordion();
-});
+        buildAssetAccordion();
+    });
+
+})(django.jQuery);
 

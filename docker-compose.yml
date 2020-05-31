@@ -1,7 +1,7 @@
 version: "3"
 services:
   roundware-db:
-    image: mdillon/postgis:10
+    image: postgis/postgis:12-3.0
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_USER: round

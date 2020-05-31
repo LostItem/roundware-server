@@ -6,7 +6,7 @@ from django.contrib.gis.geos import Point
 from django.core.cache import cache
 
 cache # pyflakes, make sure it is imported, for patching in tests
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.utils.safestring import mark_safe
@@ -19,7 +19,6 @@ from django.db.models.signals import post_save
 from django.db.models import Manager as GeoManager
 import logging
 from geopy.distance import vincenty
-
 logger = logging.getLogger(__name__)
 
 
@@ -135,20 +134,21 @@ class Asset(models.Model):
     media_display.short_name = "media"
     media_display.allow_tags = True
 
+    @property
+    def media_url(self):
+        return default_storage.url(self.filename)
+
     @mark_safe
     def audio_player(self):
         if self.mediatype == 'audio':
-            return """<div data-filename="%s" class="media-display audio-file"></div>""" % self.filename
+            return """<div data-media-url="%s" class="media-display audio-file"></div>""" % self.media_url
     audio_player.short_name = "audio"
     audio_player.allow_tags = True
 
     @mark_safe
     def image_display(self):
-        image_src = "%s%s" % (settings.MEDIA_URL, self.filename)
-        return """<div data-filename="%s" class="media-display image-file"><a href="%s" target="imagepop"
-               ><img src="%s" alt="%s" title="%s"/></a></div>""" % (
-            self.filename, image_src, image_src,
-            self.description, "click for full image")
+        return f"""<div data-media-url="{self.media_url}" class="media-display image-file"><a href="{self.media_url}" target="imagepop"
+               ><img src="{self.media_url}" alt="{self.description}" title="click for full image"/></a></div>"""
     image_display.short_name = "image"
     image_display.allow_tags = True
 
@@ -161,10 +161,10 @@ class Asset(models.Model):
             excerpt = fileread[:1000]
             more_str = chars > 1000 and """ <br/>... (excerpted from %s)""" % self.media_link_url(
             ) or ""
-            return """<div data-filename="%s" class="media-display text-file"
+            return """<div data-media-url="%s" class="media-display text-file"
                    >%s %s</div>""" % (self.filename, excerpt, more_str)
         except Exception as e:
-            return """<div class="media-display" data-filename="%s">""" + '%s (%s)' % (self.filename, e.message, type(e)) + """</div>"""
+            return """<div class="media-display" data-media-url="%s">""" + '%s (%s)' % (self.filename, e.message, type(e)) + """</div>"""
     text_display.short_name = "text"
     text_display.allow_tags = True
 
@@ -191,7 +191,8 @@ class Asset(models.Model):
 
     @mark_safe
     def media_link_url(self):
-        return '<a href="%s%s" target="_new">%s</a>' % (settings.MEDIA_URL, self.filename, self.filename)
+        media_url = default_storage.url(self.filename)
+        return f'<a href="{media_url}" target="_new">{self.filename}</a>'
     media_link_url.allow_tags = True
 
     @mark_safe

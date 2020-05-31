@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import commands
 import requests
 
 API = "http://localhost:8888/api/1"
@@ -40,12 +39,7 @@ ASSETS = [
     },
 ]
 
-programs = commands.getoutput('ps a')
-if 'runserver' in programs:
-    print("Django Runserver is running.")
-else:
-    print("Django Runserver is NOT running, start it.")
-    exit(1)
+
 
 print("Creating a session...")
 rconfig = requests.get(API + '/?operation=get_config&project_id=1')

@@ -1,4 +1,5 @@
-/**
+( function($) {
+    /**
  * A distance widget that will display a circle that can be resized and will
  * provide the radius in km.
  *
@@ -173,12 +174,11 @@ var maps = Array();
 
 
 function setLocationMaps(){
-
+    const $ = django.jQuery;
     maps = Array(); 
-
     // we might be on the Envelope admin where there are multiple Asset divs.
     // if not, we are on the Asset admin
-    asset_sets = $(".dynamic-asset_set");
+    asset_sets = django.jQuery(".dynamic-asset_set");
     multiple_assets = $("#asset_set-group").length;
 
     if (multiple_assets == 0) {
@@ -352,8 +352,7 @@ function setLocationMaps(){
 };
 
 
-$(document).ready(function() {
-    setLocationMaps();
-})
-
-//}(django.jQuery));
+    $(document).ready(function() {
+        setLocationMaps();
+    })
+})(django.jQuery);
