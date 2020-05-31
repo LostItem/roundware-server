@@ -7,18 +7,16 @@ on:
 jobs:
   test:
     container:
-      image: ubuntu:18.04
+      image: ubuntu:20.04
 
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
-      matrix:
-        python-version: [3.5]
     services:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: mdillon/postgis:9.3
+        image: mdillon/postgis:12
         ports:
           # will assign a random free host port
           - 5432:5432
