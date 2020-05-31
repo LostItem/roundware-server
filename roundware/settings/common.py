@@ -319,7 +319,7 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend'
 )
 
-ROUNDWARE_USE_REMOTE_STORAGE = os.getenv("ROUNDWARE_USE_REMOTE_STORAGE", False)
+ROUNDWARE_USE_REMOTE_STORAGE = os.getenv("ROUNDWARE_USE_REMOTE_STORAGE", False) == 'true'
 if ROUNDWARE_USE_REMOTE_STORAGE or not DEBUG:
     DEFAULT_FILE_STORAGE = 'roundware.storage.MediaStorage'
     STATICFILES_STORAGE = 'roundware.storage.StaticStorage'
