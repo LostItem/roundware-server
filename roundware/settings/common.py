@@ -241,6 +241,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ORIGIN_WHITELIST = [
+    'http://localhost:1234',
     'http://localhost:8080',
     'http://localhost:3000',
 ]
@@ -316,3 +317,16 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend'
 )
+
+
+# if os.getenv("ROUNDWARESTATIC_S3_HOSTING", False):
+DEFAULT_FILE_STORAGE = 'roundware.storage.MediaStorage'
+STATICFILES_STORAGE = 'roundware.storage.StaticStorage'
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "NOT_A_REAL_SECRET_KEY")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "UB3VB54VB2I2NYSXS6WU")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", 'rw-prod-files')
+AWS_S3_REGION_NAME = 'nyc3'
+AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+AWS_DEFAULT_ACL = None
+AWS_LOCATION = "prod.roundware.com"
+AWS_AUTO_CREATE_BUCKET = True

@@ -1,4 +1,4 @@
-FROM ubuntu:18.04 as roundware
+FROM ubuntu:20.04 as roundware
 RUN mkdir /code
 ENV PATH=/code:$PATH
 ENV PYTHONPATH=/code
@@ -15,7 +15,7 @@ ADD scripts ./scripts
 ADD roundware ./roundware
 RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install -r requirements/dev.txt
-RUN python3 roundware/manage.py collectstatic
+#RUN python3 roundware/manage.py collectstatic
 
 FROM roundware as roundware_dev
 ADD .coveragerc .

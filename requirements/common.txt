@@ -1,4 +1,4 @@
-Django==3.0
+Django<3.1
 # Creates REST APIs
 djangorestframework
 # Used for DRF filtering
@@ -44,3 +44,7 @@ django-leaflet<0.27
 # https://github.com/roundware/django-admin-bootstrapped/zipball/3.0.0
 # audio conversions
 ffmpeg-python==0.2.0
+
+# enable static file hosting in DigitalOcean Spaces (or AWS S3)
+django_storages
+boto3

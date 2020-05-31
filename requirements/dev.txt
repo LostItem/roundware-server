@@ -10,4 +10,4 @@ model_mommy==1.2.6
 mock==2.0.0
 
 #interactive interpreter for debugging
-ipython==4.0.3
+ipython
