@@ -138,10 +138,14 @@ class Asset(models.Model):
     def media_url(self):
         return default_storage.url(self.filename)
 
+    @property
+    def content_type(self):
+        return getattr(self.file, "content_type", None)
+
     @mark_safe
     def audio_player(self):
         if self.mediatype == 'audio':
-            return """<div data-media-url="%s" class="media-display audio-file"></div>""" % self.media_url
+            return f"""<audio controls preload="metadata" src="{self.media_url}" type={self.content_type}>"""
     audio_player.short_name = "audio"
     audio_player.allow_tags = True
 

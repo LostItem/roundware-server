@@ -7,7 +7,8 @@ from django.forms import fields
 
 fields.DateTimeField.strptime = lambda o, v, f: parser.parse(v)
 
-DEBUG = False
+DEBUG = os.getenv("ROUNDWARE_DEBUG", False) == "true"
+
 # True when unit tests are running. Used by roundwared.recording_collection
 TESTING = False
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
@@ -318,15 +319,15 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend'
 )
 
-
-# if os.getenv("ROUNDWARESTATIC_S3_HOSTING", False):
-DEFAULT_FILE_STORAGE = 'roundware.storage.MediaStorage'
-STATICFILES_STORAGE = 'roundware.storage.StaticStorage'
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", 'LUvf5m2IXUUgIklpXJJ3RRUoOScOD5kBh4jOppiu3jk')
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "UB3VB54VB2I2NYSXS6WU")
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", 'rw-prod-files')
-AWS_S3_REGION_NAME = 'nyc3'
-AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
-AWS_DEFAULT_ACL = None
-AWS_LOCATION = "prod.roundware.com"
-AWS_AUTO_CREATE_BUCKET = True
+ROUNDWARE_USE_REMOTE_STORAGE = os.getenv("ROUNDWARE_USE_REMOTE_STORAGE", False)
+if ROUNDWARE_USE_REMOTE_STORAGE or not DEBUG:
+    DEFAULT_FILE_STORAGE = 'roundware.storage.MediaStorage'
+    STATICFILES_STORAGE = 'roundware.storage.StaticStorage'
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", 'LUvf5m2IXUUgIklpXJJ3RRUoOScOD5kBh4jOppiu3jk')
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "UB3VB54VB2I2NYSXS6WU")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", 'rw-prod-files')
+    AWS_S3_REGION_NAME = 'nyc3'
+    AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+    AWS_DEFAULT_ACL = None
+    AWS_LOCATION = "prod.roundware.com"
+    AWS_AUTO_CREATE_BUCKET = True
