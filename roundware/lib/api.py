@@ -295,15 +295,6 @@ def add_asset_to_envelope(request, envelope_id=None):
     logger.info("Session %s - Asset %s created for file: %s",
                 session.id, asset.id, asset.file.name)
 
-    # Refresh recordings for ALL existing streams.
-    # dbus_send.emit_stream_signal(0, "refresh_recordings", "")
-
-    # Play newest asset in stream that created asset
-    # play({
-    #     'session_id': str(session.id),
-    #     'asset_id': str(asset.id)
-    # })
-
     return {"success": True,
             "asset_id": asset.id}
 
@@ -326,46 +317,9 @@ def save_asset_from_request(request, session, asset=None):
     if mediatype is None:
         mediatype = "audio"
 
-    # copy the file to a unique name (current time and date)
-    logger.debug("Session %s - Processing:%s", session.id, fileitem.name)
-    (filename_prefix, filename_extension) = os.path.splitext(fileitem.name)
-
-    dest_file = time.strftime("%Y%m%d-%H%M%S-") + str(session.id)
-    dest_filename = dest_file + filename_extension
-    dest_filepath = os.path.join(settings.MEDIA_ROOT, dest_filename)
-    count = 0
-    # If the file exists add underscore and a number until it doesn't.`
-    while (os.path.isfile(dest_filepath)):
-        dest_filename = "%s_%d%s" % (dest_file, count, filename_extension)
-        dest_filepath = os.path.join(settings.MEDIA_ROOT, dest_filename)
-        count += 1
-
-    fileout = open(dest_filepath, 'wb')
-    fileout.write(fileitem.file.read())
-    fileout.close()
-
-    # Delete the uploaded original after the copy has been made.
-    if asset:
-        asset.file.delete()
-        asset.file.name = dest_filename
-        asset.filename = dest_filename
-        asset.save()
-    # Make sure everything is in wav form only if media type is audio.
-    if mediatype == "audio":
-        newfilename = convertaudio.convert_uploaded_file(dest_filename)
-    else:
-        newfilename = dest_filename
-    if not newfilename:
-        raise RoundException("File not converted successfully: " + newfilename)
-
-    # if the request comes from the django admin interface
-    # update the Asset with the right information
-    if asset:
-        asset.session = session
-        asset.filename = newfilename
     # create the new asset if request comes in from a source other
     # than the django admin interface
-    else:
+    if not asset:
         # get location data from request
         latitude = get_parameter_from_request(request, 'latitude')
         longitude = get_parameter_from_request(request, 'longitude')

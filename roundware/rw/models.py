@@ -1,12 +1,14 @@
 # Roundware Server is released under the GNU Affero General Public License v3.
 # See COPYRIGHT.txt, AUTHORS.txt, and LICENSE.txt in the project root directory.
-
-
+import ffmpeg
 from django.contrib.gis.geos import Point
 from django.core.cache import cache
+from django.dispatch import receiver
+
+from roundware.lib.exception import RoundException
 
 cache # pyflakes, make sure it is imported, for patching in tests
-from django.core.files.storage import FileSystemStorage, default_storage
+from django.core.files.storage import default_storage
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.utils.safestring import mark_safe
@@ -14,7 +16,7 @@ from django.db import transaction
 from django.contrib.gis.db import models
 from rw.fields import ValidatedFileField
 from django.conf import settings
-from datetime import datetime
+from datetime import datetime, time
 from django.db.models.signals import post_save
 from django.db.models import Manager as GeoManager
 import logging
@@ -34,10 +36,21 @@ class Asset(models.Model):
         'photo': settings.ALLOWED_IMAGE_MIME_TYPES,
         'text': settings.ALLOWED_TEXT_MIME_TYPES,
     }
+    AUDIO_CONVERSION_OUTPUT_FORMATS = ['.mp3', '.wav']
 
     class Meta:
         ordering = ['id']
         app_label = 'rw'
+
+    def format_filename(self, filename):
+        timestamp = self.created.strftime('%Y%m%d-%H%M%S-%f')
+        id = self.session.id if self.session else 'none'
+        parts = filename.split('.')
+        if len(parts) > 1:
+            ext = f".{parts[-1]}"
+        else:
+            ext = ""
+        return f"assets/{timestamp}-{id}{ext}"
 
     session = models.ForeignKey(
         'Session', null=True, blank=True, on_delete = models.SET_NULL)
@@ -47,11 +60,10 @@ class Asset(models.Model):
     longitude = models.FloatField(null=True, blank=False)
     shape = models.MultiPolygonField(geography=True, null=True, blank=True)
     filename = models.CharField(max_length=256, null=True, blank=True)
-    file = ValidatedFileField(storage=FileSystemStorage(
-        location=settings.MEDIA_ROOT,
-        base_url=settings.MEDIA_URL,),
+    file = ValidatedFileField(
         content_types=settings.ALLOWED_MIME_TYPES,
-        upload_to=".", help_text="Upload file")
+        upload_to=format_filename,
+        help_text="Upload file")
     volume = models.FloatField(null=True, blank=True, default=1.0)
 
     submitted = models.BooleanField(default=True)
@@ -76,9 +88,7 @@ class Asset(models.Model):
         'LocalizedString', blank=True, related_name='alt_text_string')
 
     # TODO: needs verification
-    loc_caption = ValidatedFileField(storage=FileSystemStorage(
-        location=settings.MEDIA_ROOT,
-        base_url=settings.MEDIA_URL,),
+    loc_caption = ValidatedFileField(
         content_types=settings.ALLOWED_TEXT_MIME_TYPES,
         upload_to=".", help_text="Upload captions", null=True)
 
@@ -97,6 +107,7 @@ class Asset(models.Model):
         super(Asset, self).__init__(*args, **kwargs)
         self.ENVELOPE_ID = 0
 
+
     def clean_fields(self, exclude=None):
         super(Asset, self).clean_fields(exclude)
         if not self.file:
@@ -105,6 +116,7 @@ class Asset(models.Model):
         # be validated
         if hasattr(self.file.file, 'content_type'):
             self.validate_filetype_for_mediatype(self.file.file.content_type)
+
 
     def validate_filetype_for_mediatype(self, content_type):
         """ content_type of file uploaded must be valid for mediatype
@@ -136,7 +148,7 @@ class Asset(models.Model):
 
     @property
     def media_url(self):
-        return default_storage.url(self.filename)
+        return self.file.url if self.file else None
 
     @property
     def content_type(self):
@@ -250,7 +262,21 @@ class Asset(models.Model):
             force_insert, force_update, using, *args, **kwargs)
 
     def str(self):
-        return __str__(self.id) + ": " + self.mediatype + " at " + str(self.latitude) + "/" + str(self.longitude)
+        return str(self.id) + ": " + self.mediatype + " at " + str(self.latitude) + "/" + str(self.longitude)
+
+
+@receiver(post_save, sender=Asset)
+def convert_audio_source(sender, instance=None, created=None, **kwargs):
+    if not created:
+        return
+    if not instance and instance.file:
+        raise RoundException(
+            "Uploaded file not found: " + instance.filepath)
+    else:
+        source = ffmpeg.input(instance.media_url)
+        outputs = {}
+        for output_format in Asset.AUDIO_CONVERSION_OUTPUT_FORMATS:
+            outputs[output_format] = source.output(instance.file.name + output_format).run()
 
 
 class Audiotrack(models.Model):

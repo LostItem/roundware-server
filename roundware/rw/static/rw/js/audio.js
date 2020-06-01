@@ -1,3 +1,5 @@
+(function($) {
+
 /**
  * Creates the initial jplayer instance to be copied into all .audio-file divs.
  * @param id
@@ -24,56 +26,54 @@ var jpCreator = function(id) { return '<div id="jquery_jplayer_' + id + '" class
 };
 
 
-/**
- * Initializes jplayer on the given dom element.
- * @param id
- * @param {string} media_url Audio file to be played. The extention will be parsed
- * in order to initialize jPlayer with the correct media player.
- * @param dom A copy of the dom element created with jpCreator
- * @param $ jQuery, passed in to avoid namespacing conflicts.
- */
-function createPlayer(id, media_url, dom, $) {
-    var re = /.*\.(.{3,4})$/; // File extention = last 3-4 chars after last period.
-    var extension = media_url.match(re);
-    if (!extension ) {
-        console.log("Invalid or missing file extension.");
-        return;
+    /**
+     * Initializes jplayer on the given dom element.
+     * @param id
+     * @param {string} media_url Audio file to be played. The extention will be parsed
+     * in order to initialize jPlayer with the correct media player.
+     * @param dom A copy of the dom element created with jpCreator
+     * @param $ jQuery, passed in to avoid namespacing conflicts.
+     */
+    function createPlayer(id, media_url, dom, $) {
+        // chop off the get params, if there are some
+        const base_media_url = media_url.split("?")[0];
+        var re = /.*\.(.{3,4})$/; // File extention = last 3-4 chars after last period.
+        var extension = base_media_url.match(re);
+        if (!extension ) {
+            console.log("Invalid or missing file extension.");
+            return;
+        }
+        extension = extension[1];
+        var setMediaObject = {};
+        setMediaObject[extension] = media_url;
+
+        $(dom).jPlayer({
+            preload: 'none',
+            ready: function() {
+                $(this).jPlayer("setMedia", setMediaObject);
+            },
+            cssSelectorAncestor: "#jp_container_" + id,
+            swfPath: "/static/js",
+            supplied: extension
+        });
     }
-    extension = extension[1];
-    var setMediaObject = {};
-    setMediaObject[extension] = media_url;
 
-    $(dom).jPlayer({
-        preload: 'none',
-        ready: function() {
-            $(this).jPlayer("setMedia", setMediaObject);
-        },
-        cssSelectorAncestor: "#jp_container_" + id,
-        swfPath: "/static/js",
-        supplied: extension
-    });
-}
-
-(function($) {
-    var media_url;
-    var id = 1;
 
     $(document).ready( function() {
         var baseJplayer = $(jpCreator(''));
         // If we are in the change_list view, this will update every row with a jplayer instance
         // If we are in the singular change view, this will only create one jplayer instance
-        $('div.audio-file').each( function() {
+        $('div.audio-file').each( function(id, value) {
             var that = this;
             var dom = baseJplayer.clone();
             // Create identifiers to tie buttons to <audio> elements.
             dom[0].id = 'jquery_jplayer_' + id;
             dom[1].id = 'jp_container_' + id;
-            media_url = $(this).attr('data-media-url');
+            let media_url = $(this).attr('data-media-url');
             if (media_url && media_url != 'None') {
-                $(that).append(dom);
+                that.append(dom);
                 createPlayer(id, media_url, dom[0], $);
             }
-            id++;
         });
     })
 

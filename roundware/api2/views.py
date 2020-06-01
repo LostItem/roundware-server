@@ -23,7 +23,7 @@ from roundware.api2.filters import (AssetFilterSet, AudiotrackFilterSet, Envelop
                                     UIGroupFilterSet, UIItemFilterSet, VoteFilterSet)
 from roundware.lib.api import (get_project_tags_new as get_project_tags,
                                add_asset_to_envelope,
-                               save_asset_from_request, vote_asset, get_projects_by_location,
+                               vote_asset, get_projects_by_location,
                                vote_count_by_asset, log_event, save_speaker_from_request)
 from roundware.api2.permissions import AuthenticatedReadAdminWrite
 from rest_framework import viewsets, status

@@ -37,19 +37,19 @@ class ValidatedFileField(models.FileField):
         if self.content_types:
             uploaded_content_type = getattr(file, 'content_type', '')
 
-            mg = magic.Magic(mime=True)
-            content_type_magic = mg.from_buffer(
-                file.read(self.mime_lookup_length)
-            )
-            file.seek(0)
-
-            # Prefere mime-type instead mime-type from http header
-            if uploaded_content_type != content_type_magic:
-                uploaded_content_type = content_type_magic
+            # mg = magic.Magic(mime=True)
+            # content_type_magic = mg.from_buffer(
+            #     file.read(self.mime_lookup_length)
+            # )
+            # file.seek(0)
+            #
+            # # Prefere mime-type instead mime-type from http header
+            # if uploaded_content_type != content_type_magic:
+            #     uploaded_content_type = content_type_magic
 
             if not uploaded_content_type in self.content_types:
                 raise forms.ValidationError(
-                    _('Files of type %(type)s are not supported.') % {'type': content_type_magic}
+                    _('Files of type %(type)s are not supported.') % {'type': uploaded_content_type}
                 )
 
         if self.max_upload_size and hasattr(file, '_size'):
